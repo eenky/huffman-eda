@@ -1,0 +1,20 @@
+{
+  "stable_reachable": [[1, "00"], [2, "01"]],
+  "diagnostics": [
+    {"rule": "FT003", "severity": "error", "state": 2, "column": "11"},
+    {"rule": "FT003", "severity": "error", "state": 3, "column": "11"},
+    {"rule": "FT004", "severity": "warning", "state": 2, "column": "11"},
+    {"rule": "FT005", "severity": "error", "state": 1, "column": "10"},
+    {"rule": "FT006", "severity": "info", "state": 3, "column": "01"},
+    {"rule": "FT008", "severity": "warning", "state": 3, "column": null}
+  ],
+  "derivation": [
+    "Column bit 0 is x1 (leftmost). Row 4 does not exist, so every (4,c) is unspecified.",
+    "settle(2,11): 2->3->4, (4,11) unspecified => UNDEFINED; same for settle(3,11) (FT003 x2).",
+    "(2,11)->3 targets (3,11) = '4,-', specified and unstable (FT004). (3,11)->4 targets an unspecified entry: FT003, not FT004.",
+    "Row 3 has no stable entry (FT008).",
+    "Explore from (1,00): flip x1 -> (1,10) unspecified (FT005); flip x2 -> path (1,2) stable (2,01), z: 0,-,1 ok.",
+    "From (2,01): flip x1 -> path (2,3,4) UNDEFINED; flip x2 -> path (2,1) stable (1,00), z: 1,-,0 ok.",
+    "Visited specified entries: all except (3,01) (FT006)."
+  ]
+}
