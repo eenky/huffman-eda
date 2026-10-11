@@ -1,0 +1,15 @@
+{
+  "stable_reachable": [[1, "0"]],
+  "diagnostics": [
+    {"rule": "FT001", "severity": "error", "state": 1, "column": "1"},
+    {"rule": "FT006", "severity": "info", "state": 2, "column": "0"},
+    {"rule": "FT006", "severity": "info", "state": 2, "column": "1"},
+    {"rule": "FT006", "severity": "info", "state": 3, "column": "0"},
+    {"rule": "FT006", "severity": "info", "state": 3, "column": "1"}
+  ],
+  "derivation": [
+    "(1,1) has two choices (FT001). Nondeterministic entries are excluded from FT002/FT003/FT004.",
+    "Explore: (1,0) -x-> (1,1) settles NONDET with path (1); no further states reached.",
+    "Rows 2 and 3 are specified but never visited (FT006 x4)."
+  ]
+}
