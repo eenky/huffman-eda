@@ -23,10 +23,12 @@ from huffman_eda.explore import explore
 from huffman_eda.io import load_table
 from huffman_eda.validate import validate
 from reference import huffman_ref as ref
+from reference import minimize_ref as mref
 
 ROOT = Path(__file__).parent
 GOLDEN = sorted(p for p in (ROOT / "golden").iterdir() if (p / "table.yaml").exists())
 PAIRS = sorted(p for p in (ROOT / "golden_pairs").iterdir() if (p / "a.yaml").exists())
+MINIMIZE = sorted((ROOT / "golden_minimize").glob("*/table.yaml"))
 N_TABLES = 600
 SEED = 20261011
 
@@ -130,3 +132,75 @@ def test_production_agrees_with_reference(tmp_path: Path) -> None:
             assert (res.ok, got_cex) == (ok, cex), (
                 f"implements differs:\n{text}\n---\n{pb.read_text()}"
             )
+
+
+# ---------------------------------------------------------------- §9 (minimization)
+
+
+@pytest.mark.parametrize("table_path", MINIMIZE, ids=lambda p: p.parent.name)
+def test_reference_reproduces_golden_minimize(table_path: Path) -> None:
+    t = ref.load(table_path)
+    want = json.loads((table_path.parent / "expected.json").read_text())
+    if want["precondition"] != "ok":
+        assert mref.violated_precondition(t) == want["precondition"]
+        return
+    assert mref.violated_precondition(t) == []
+
+    def sets(xs: list[frozenset[int]]) -> list[list[int]]:
+        return [sorted(x) for x in xs]
+
+    assert sorted(map(list, mref.incompatible_pairs(t))) == want["incompatible_pairs"]
+    assert sets(mref.maximal_compatibles(t)) == want["maximal_compatibles"]
+    assert sets(mref.prime_compatibles(t)) == want["prime_compatibles"]
+    covers = mref.min_closed_covers(t)
+    assert [sets(k) for k in covers] == want["min_closed_covers"]
+    assert len(covers[0]) == want["min_cover_size"]
+    for bad in want.get("not_closed", []):
+        assert not mref.is_closed_cover(t, [frozenset(c) for c in bad]), bad
+        with pytest.raises(ValueError):
+            mref.reduce(t, [frozenset(c) for c in bad])
+    red = mref.reduce(t, [frozenset(c) for c in want["reduced"]["cover"]])
+    assert list(red.reset) == want["reduced"]["reset"]
+    for s, row in want["reduced"]["rows"].items():
+        for column in red.columns():
+            text = row.get(column)
+            cell = red.cell(int(s), column)
+            if text is None:
+                assert cell == []
+            else:
+                nxt, _, outs = text.partition(",")
+                assert cell == [(int(nxt.strip("[]")), outs)], (s, column)
+    assert ref.implements(t, red)[0]
+
+
+def _random_normal(rng: random.Random) -> ref.RefTable:
+    n, m, ns = rng.randint(1, 2), rng.randint(1, 2), rng.randint(2, 5)
+    cols = ["".join(b) for b in itertools.product("01", repeat=n)]
+    stable = {c: [s for s in range(1, ns + 1) if rng.random() < 0.45] for c in cols}
+    rows: dict[int, dict[str, list[tuple[int, str]]]] = {s: {} for s in range(1, ns + 1)}
+    for c in cols:
+        for s in range(1, ns + 1):
+            alphabet = "01" if s in stable[c] else "01-"
+            outs = "".join(rng.choice(alphabet) for _ in range(m))
+            if s in stable[c]:
+                rows[s][c] = [(s, outs)]
+            elif stable[c] and rng.random() < 0.8:
+                rows[s][c] = [(rng.choice(stable[c]), outs)]
+    s0, c0 = rng.randint(1, ns), rng.choice(cols)
+    rows[s0][c0] = [(s0, "".join(rng.choice("01") for _ in range(m)))]
+    return ref.RefTable([f"x{i}" for i in range(n)], [f"z{j}" for j in range(m)], (s0, c0), rows)
+
+
+def test_reference_minimization_is_sound() -> None:
+    """§9.7 on the reference itself: every minimum cover and the singleton cover."""
+    rng = random.Random(SEED + 9)
+    checked = 0
+    while checked < 150:
+        t = _random_normal(rng)
+        if mref.violated_precondition(t):
+            continue
+        checked += 1
+        singletons = [frozenset([s]) for s in mref.states(t)]
+        for cover in [*mref.min_closed_covers(t), singletons]:
+            ok, cex = ref.implements(t, mref.reduce(t, cover))
+            assert ok, (t.rows, t.reset, cover, cex)

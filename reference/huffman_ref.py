@@ -19,7 +19,7 @@ from typing import Any
 
 import yaml
 
-IMPLEMENTED_SECTIONS = ("1", "2", "3", "4", "5", "8")
+IMPLEMENTED_SECTIONS = ("1", "2", "3", "4", "5", "8", "9")
 
 Choice = tuple[int, str]
 Diag = tuple[str, str, int | None, str | None]
