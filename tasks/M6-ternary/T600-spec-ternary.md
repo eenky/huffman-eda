@@ -1,9 +1,9 @@
 # T600: Spec: §11 netlists and ternary simulation and golden
 
 **Depends on:** M5  
-**Owner:** owner
+**Owner:** author agent (spec PR), approved by reviewer agent
 
-## Owner checklist
+## Spec PR checklist
 - Define the gate netlist IR: gate types, feedback wires as the state variables of the
   Huffman model, and the file format.
 - Define ternary simulation (Eichelberger): Algorithm A (changing inputs set to X,

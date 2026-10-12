@@ -1,8 +1,15 @@
 {
-  "implements_ab": {"ok": true, "counterexample": null},
-  "implements_ba": {"ok": true, "counterexample": null},
+  "implements_ab": {
+    "ok": true,
+    "counterexample": null
+  },
+  "implements_ba": {
+    "ok": true,
+    "counterexample": null
+  },
   "derivation": [
     "a = b = golden/output_nonmonotonic, which has an FT007 error on (1,0) -> 1.",
     "Check 3 forbids only hazards that impl introduces. spec has the same hazard on the same output, so implements(T, T) holds (8.4 consequence)."
-  ]
+  ],
+  "source": "synthetic"
 }

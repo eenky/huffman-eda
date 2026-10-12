@@ -1,16 +1,47 @@
 {
-  "stable_reachable": [[1, "0"]],
+  "stable_reachable": [
+    [
+      1,
+      "0"
+    ]
+  ],
   "diagnostics": [
-    {"rule": "FT002", "severity": "error", "state": 1, "column": "1"},
-    {"rule": "FT004", "severity": "warning", "state": 1, "column": "1"},
-    {"rule": "FT004", "severity": "warning", "state": 2, "column": "1"},
-    {"rule": "FT008", "severity": "warning", "state": 2, "column": null},
-    {"rule": "FT006", "severity": "info", "state": 2, "column": "0"}
+    {
+      "rule": "FT002",
+      "severity": "error",
+      "state": 1,
+      "column": "1"
+    },
+    {
+      "rule": "FT004",
+      "severity": "warning",
+      "state": 1,
+      "column": "1"
+    },
+    {
+      "rule": "FT004",
+      "severity": "warning",
+      "state": 2,
+      "column": "1"
+    },
+    {
+      "rule": "FT008",
+      "severity": "warning",
+      "state": 2,
+      "column": null
+    },
+    {
+      "rule": "FT006",
+      "severity": "info",
+      "state": 2,
+      "column": "0"
+    }
   ],
   "derivation": [
     "Column 1: f(1)=2, f(2)=1 is a 2-cycle; reported once at min state 1 (FT002).",
     "(1,1)->2 and (2,1)->1 each target a specified unstable entry (FT004).",
     "Row 2 has no stable entry (FT008).",
     "Explore: (1,0) -x-> settle oscillates via path (1,2); visits (1,1),(2,1). (2,0) never visited (FT006)."
-  ]
+  ],
+  "source": "synthetic"
 }

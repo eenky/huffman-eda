@@ -1,9 +1,9 @@
 # T400: Spec: §9 state minimization and golden
 
 **Depends on:** M3  
-**Owner:** owner
+**Owner:** author agent (spec PR), approved by reviewer agent
 
-## Owner checklist (read the book's state-minimization chapter first)
+## Spec PR checklist (read the book's state-minimization chapter first)
 - Define compatibility for incompletely specified tables: output compatibility, implied
   pairs, and the fixed point.
 - Define maximal compatibles, prime compatibles, the closure condition, and the reduced

@@ -1,15 +1,32 @@
 {
   "implements_ab": {
     "ok": false,
-    "counterexample": {"trace": ["10", "11"], "kind": "OUTPUT_MISMATCH", "output": "z", "outcome": null}
+    "counterexample": {
+      "trace": [
+        "10",
+        "11"
+      ],
+      "kind": "OUTPUT_MISMATCH",
+      "output": "z",
+      "outcome": null
+    }
   },
   "implements_ba": {
     "ok": false,
-    "counterexample": {"trace": ["10", "11"], "kind": "OUTPUT_MISMATCH", "output": "z", "outcome": null}
+    "counterexample": {
+      "trace": [
+        "10",
+        "11"
+      ],
+      "kind": "OUTPUT_MISMATCH",
+      "output": "z",
+      "outcome": null
+    }
   },
   "derivation": [
     "b flips z on stable (4,11) from 1 to 0.",
     "BFS from (1,00): bit 0 -> (3,10) is enqueued before bit 1 -> (2,01). Processing (3,10): bit 0 -> (1,00) already seen; bit 1 -> (4,11), where z differs.",
     "So the first failure in BFS order is trace [10, 11], not [01, 11], even though both have length 2. This tests the tie-break."
-  ]
+  ],
+  "source": "synthetic"
 }

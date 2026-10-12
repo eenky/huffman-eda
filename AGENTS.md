@@ -11,31 +11,73 @@ in fundamental mode. Every transformation (minimize, assign, synthesize, export)
 checked by an independent oracle. You are building one small, well-specified piece at a
 time.
 
-## The workflow
+## Roles
+
+Two agents work here, under two separate GitHub identities. The separation is enforced by
+`scripts/spec_policy.py`, which runs from `main` and cannot be changed by either agent.
+
+| Role | Identity | May change | Never changes |
+|---|---|---|---|
+| **Author** (you, unless told otherwise) | `vars.AUTHOR_LOGIN` | `src/`, `tests/` (non-golden), spec (`docs/SEMANTICS.md`, `docs/spec_lock.json`, new golden cases), `tasks/`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md` | `reference/`, `tests/test_reference_diff.py`, governance |
+| **Reviewer** (see REVIEWER.md) | `vars.REVIEWER_LOGIN` | `reference/`, `tests/test_reference_diff.py`, corrections to frozen ground truth (owner-approved only) | `src/`, `tests/` |
+| **Owner** | `vars.OWNER_LOGIN` | anything | |
+
+Governance files are `.github/**`, `AGENTS.md`, `REVIEWER.md`, and `scripts/spec_policy.py`.
+Only the owner changes them.
+
+Every PR needs an approving review from an identity other than its author, plus green
+`test` and `spec-policy` checks. The author enables auto-merge (`gh pr merge --auto --squash`)
+and never merges by any other route. Never add or remove the `owner-approved` label.
+
+## Two kinds of PR, never mixed
+
+1. **Spec PR** (milestone spec tasks `Tx00`, and spec questions). It may change only
+   `docs/SEMANTICS.md`, `docs/spec_lock.json`, new golden cases, `tasks/`, and
+   `docs/ROADMAP.md`. Title: `spec(Tx00): ...`.
+2. **Implementation PR** (every other task). It must not touch any spec path.
+
+The policy check (P2) rejects a PR that mixes the two. When a task needs a spec change,
+stop and open the spec PR first. The implementation PR waits until that is merged.
+
+## Rules for spec PRs
+
+- **New sections only.** Write the next reserved section of SEMANTICS (`## 9. ...`). Sections
+  listed in `docs/spec_lock.json` are frozen. Changing one, or an existing golden file,
+  fails the policy check unless the owner applies `owner-approved`. If you think frozen
+  ground truth is wrong, open a *Spec question* issue with a minimal failing table and stop.
+- **Lock what you add.** Before opening the PR, run
+  `python scripts/spec_policy.py lock --section <N>` for each new section.
+- **Golden cases are append-only.** Each new case's `expected.json` needs:
+  - a non-empty `derivation` list explaining every expected entry
+  - a `source` field: `"synthetic"`, or `"book: p.<page>, <figure/example id>"`
+- **Book-sourced cases come from the source, never from memory.** Transcribe only from the
+  page images or PDF the owner provides. Never commit page images or book text to this
+  public repo: commit only your transcription of the table, and cite the page and figure.
+  The reviewer transcribes the same figure independently and compares the two.
+- **Decisions are explicit.** When the book leaves a choice open (as with don't-cares in
+  §8), state the choice and the reason in the spec text, so the reviewer can check it.
+- A spec PR merges only after the reviewer's reference implementation reproduces every
+  new golden expectation (see REVIEWER.md).
+
+## The workflow for an implementation task
 
 1. You are assigned **exactly one** task file: `tasks/M<k>-*/T<id>-*.md`.
-2. Create a branch named `task/T<id>-<slug>` from the latest `main`.
-3. Implement only what the task asks for. Touch only the paths listed under
-   **May touch**.
+2. Branch `task/T<id>-<slug>` from the latest `main`.
+3. Implement only that task, touching only the paths listed under **May touch**.
 4. Run the Definition of Done locally. All of it must pass.
-5. Open a PR titled `T<id>: <task title>` using the PR template. Fill in every
-   checklist item honestly.
-6. When CI fails or a review comment arrives, fix it **on the same branch**. Never open a
-   second PR for the same task.
-7. Stop when the PR is green and every review thread is resolved. A human merges.
+5. Open the PR using the template, enable auto-merge, and request review from the reviewer.
+6. Fix CI failures and review comments **on the same branch**.
+7. Every claim in a PR (a mutant is unobservable, a case is excluded, a bound is sound)
+   must cite the test or command that demonstrates it.
 
-## Protected paths (never edit)
+## Protected ground truth
 
-- `tests/golden/**`
-- `tests/test_golden.py`
-- `docs/SEMANTICS.md`
-- `AGENTS.md`
-- `.github/**`
+Agents can never weaken these, and the policy check enforces it mechanically:
 
-CI fails any PR that touches these without the owner's `spec-approved` label. If you
-believe one of them is wrong, **stop**. Open an issue using the *Spec question* template.
-Include a minimal table, what the spec says, what you think it should say, and why.
-Do not work around the spec in code.
+- frozen SEMANTICS sections and locked files (hashes in `docs/spec_lock.json`)
+- existing golden files (append-only)
+- the reference implementation and the differential test (reviewer only)
+- governance files (owner only)
 
 ## Source-of-truth order
 
@@ -51,8 +93,9 @@ description.
 
 - Never transcribe figures, tables, or examples from the textbook from memory. Golden data
   comes only from the owner.
-- Never add `skip`, `xfail`, or `# type: ignore`, and never weaken an assertion, to make CI
-  pass. If a test seems wrong, raise a Spec question.
+- Never add `skip`, `xfail`, `importorskip`, `# type: ignore`, `# noqa`, or `pragma: no cover`,
+  and never weaken an assertion. The policy check (P7) rejects the markers. If a test seems
+  wrong, raise a Spec question.
 - Never add a runtime dependency unless the task lists it.
 - Never print from core modules. Return `Diagnostic` objects or raise typed exceptions.
 - Never implement a later task's scope "while you're there".
@@ -64,6 +107,7 @@ pip install -e ".[dev]"
 ruff check .
 ruff format --check .
 mypy
+python scripts/spec_policy.py verify
 pytest -q -rs
 ```
 

@@ -1,9 +1,9 @@
 # T800: Spec: §13 HDL export and SVA and golden
 
 **Depends on:** M7  
-**Owner:** owner
+**Owner:** author agent (spec PR), approved by reviewer agent
 
-## Owner checklist
+## Spec PR checklist
 - Define the SystemVerilog behavioral reference model of a flow table: how settling is
   modeled with no clock (for example, an event loop with an iteration bound).
 - Define the SVA properties: the SIC environment assumption on input changes; outputs and
