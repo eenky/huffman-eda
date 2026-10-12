@@ -228,11 +228,16 @@ Counterexample.to_dict() -> {"trace": [...], "kind": ..., "output": ..., "outcom
 ### 8.7 Consequences for M3 tasks
 
 - T302: this section replaces the `InputStep` signature in the task file.
-- T303: the output-flip mutation operator only flips **specified** bits on reachable
-  stable entries, including the reset entry. Every such mutant must be killed: there is no
-  "unobservable" exemption for this operator. Surviving redirect-mutants must be justified
-  by an independent bounded trace enumeration (depth <= 2 x number of states), never by
-  `equiv.py` itself.
+- T303: Mutant verdicts are fixed by class, independently of `equiv.py`:
+  - (a) Output flips of a specified bit on a reachable stable entry, including the reset
+    entry: must be killed.
+  - (b) Shortcut redirects (`t' = t`): `implements(T, M)` must hold. `implements(M, T)` is
+    not asserted.
+  - (c) Distinguishing redirects (the outputs of `(t', c')` are incompatible with
+    `(t, c')`): must be killed.
+  - (d) All other redirects: counted and reported, never gated.
+
+  Every gated verdict must match. There is no percentage threshold.
 
 ## 9+. Reserved
 
