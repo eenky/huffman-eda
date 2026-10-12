@@ -1,0 +1,23 @@
+{
+  "reset_ok": true,
+  "nodes": [
+    {
+      "state": 1,
+      "column": "0"
+    }
+  ],
+  "edges": [
+    {
+      "src_state": 1,
+      "src_column": "0",
+      "dst_column": "1",
+      "flipped": 0,
+      "outcome": "nondet",
+      "path": [
+        1
+      ],
+      "final": 1,
+      "cycle": []
+    }
+  ]
+}
