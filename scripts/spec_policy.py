@@ -10,7 +10,8 @@ Subcommands
   lock   [--section N ...] [--file PATH ...]     append lock entries (spec PRs)
 
 Environment for `check`: OWNER_LOGIN, REVIEWER_LOGIN (required, fail closed),
-OWNER_APPROVED ("true" when the `owner-approved` label was applied by OWNER_LOGIN).
+OWNER_APPROVED ("true" when the `owner-approved` label was applied by OWNER_LOGIN),
+PEER_APPROVED ("true" when AUTHOR_LOGIN approved the PR's current head commit).
 Standard library only.
 """
 
@@ -29,7 +30,15 @@ from pathlib import Path
 LOCK = "docs/spec_lock.json"
 SEMANTICS = "docs/SEMANTICS.md"
 
-GOVERNANCE = (".github/", "AGENTS.md", "REVIEWER.md", "scripts/spec_policy.py")
+GOVERNANCE = (
+    ".github/",
+    "AGENTS.md",
+    "REVIEWER.md",
+    "scripts/spec_policy.py",
+    "scripts/app_token.sh",
+    "scripts/reviewer_verdict.sh",
+    "scripts/setup_governance.sh",
+)
 REFERENCE = ("reference/", "tests/test_reference_diff.py")
 SPEC = (SEMANTICS, LOCK, "tests/golden/", "tests/golden_pairs/")
 NEUTRAL = ("tasks/", "docs/ROADMAP.md", "docs/ARCHITECTURE.md", "README.md")
@@ -114,6 +123,7 @@ def check(base: str, head: str, author: str) -> list[str]:
         return []
     owner_approved = os.environ.get("OWNER_APPROVED") == "true"
     role = "reviewer" if author == reviewer else "author"
+    peer_approved = os.environ.get("PEER_APPROVED") == "true"
 
     changes: list[tuple[str, str]] = []  # (status, path); renames count as delete + add
     for line in _git("diff", "--name-status", "--no-renames", base, head).splitlines():
@@ -127,6 +137,13 @@ def check(base: str, head: str, author: str) -> list[str]:
     for _status, path in changes:
         if _kind(path) not in allowed[role]:
             errs.append(f"P1: {role} may not change {_kind(path)} path {path}")
+
+    # P8 the reviewer never self-approves: its PRs need the author app's approval on this head
+    if role == "reviewer" and not peer_approved:
+        errs.append(
+            "P8: a reviewer PR needs an APPROVED review from the author app on its current head"
+            " commit (then add the peer-reviewed label to re-run this check)"
+        )
 
     # P2 no mixing ground truth with code that is judged by it
     if "spec" in kinds and kinds & {"impl", "reference"}:

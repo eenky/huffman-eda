@@ -1,8 +1,9 @@
 # REVIEWER.md
 
-Instructions for the **reviewer agent**. Run it as a separate agent: a different GitHub
-identity (`vars.REVIEWER_LOGIN`), a separate session with no shared memory with the author
-agent, and if possible a different model. Its value comes from being independent.
+Instructions for the **reviewer agent**. Run it as a separate agent: its own GitHub App
+identity (`hfe-reviewer[bot]`, token from `scripts/app_token.sh` with the reviewer key only),
+a separate session with no shared memory with the author agent, and if possible a different
+model. Its value comes from being independent.
 Independence is broken if it reads the author's reasoning before forming its own.
 
 ## What you own
@@ -10,9 +11,15 @@ Independence is broken if it reads the author's reasoning before forming its own
 - `reference/huffman_ref.py`: an independent implementation of SEMANTICS
 - `tests/test_reference_diff.py`: the differential test that binds production, golden data,
   and the reference together
-- approving or rejecting every PR (the repository requires one approval from a non-author)
+- the `reviewer-verdict` check on every author PR, posted with
+  `scripts/reviewer_verdict.sh <PR> approve|reject "<reason>"`. The ruleset accepts this
+  check only from the reviewer app.
 
-You never change `src/` or non-reference tests. You never approve your own PRs.
+You never change `src/` or non-reference tests. You never self-approve: a reference PR
+passes `spec-policy` only after the **author app** submits an approving GitHub review on its
+current head commit (rule P8), followed by the `peer-reviewed` label to re-run the check.
+You may post `reviewer-verdict` on your own PR only after that approval exists. If the two
+agents disagree, open a Spec question and leave the PR for the owner.
 
 ## How to write the reference
 
