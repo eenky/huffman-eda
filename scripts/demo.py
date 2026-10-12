@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Local demo: load flow tables and see what the IR and settle() do.
+"""Local demo: load a flow table and see what every M1 module does with it.
 
     python scripts/demo.py                       # every case in tests/golden/
     python scripts/demo.py path/to/table.yaml    # one or more tables
 
-Nothing here is part of a milestone task; it is a scratch pad for eyeballing M1 while
-the `hfe` CLI (T203), explore (T104) and the FT rules (T105/T106) are still missing.
+Nothing here is part of a milestone task; it is a scratch pad for eyeballing M1 before
+the `hfe` CLI (T203) exists. It walks the whole pipeline: load (T102), the grid and
+stability (T101), settle (T103), explore (T104) and validate (T105/T106).
 """
 
 from __future__ import annotations
@@ -13,9 +14,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from huffman_eda.diagnostics import Diagnostic
+from huffman_eda.explore import explore
 from huffman_eda.io import ParseError, load_table
 from huffman_eda.model import FlowTable
 from huffman_eda.semantics import Outcome, settle
+from huffman_eda.validate import validate
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "golden"
@@ -73,6 +77,34 @@ def show(table: FlowTable) -> None:
             detail = "stopped at the unspecified/nondeterministic cell"
         print(f"    ({state}, {column!r}) -> {result.kind.name:12} path={result.path} {detail}")
     print()
+
+    walked = explore(table)
+    print(
+        f"  explore: reset_ok={walked.reset_ok} stable={len(walked.stable)} "
+        f"visited={len(walked.visited)} transitions={len(walked.transitions)}"
+    )
+    for entry in walked.stable:
+        print(f"    stable {entry}")
+    print()
+
+    report = validate(table)
+    counts = {
+        severity: sum(d.severity == severity for d in report.diagnostics)
+        for severity in ("error", "warning", "info")
+    }
+    print(
+        f"  validate: {len(report.diagnostics)} diagnostic(s) {counts} "
+        f"-> hfe exit code {1 if report.has_errors else 0}"
+    )
+    for diagnostic in report.diagnostics:
+        print(f"    {format_diagnostic(diagnostic)}")
+    print()
+
+
+def format_diagnostic(diagnostic: Diagnostic) -> str:
+    """One diagnostic as rule, severity, location, message."""
+    where = f"({diagnostic.state},{diagnostic.column})"
+    return f"{diagnostic.rule} {diagnostic.severity:7} {where:10} {diagnostic.message}"
 
 
 def main(argv: list[str]) -> int:
