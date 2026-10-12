@@ -9,13 +9,25 @@ from typing import Any
 
 import yaml
 
+from huffman_eda.gray import gray_columns
 from huffman_eda.model import Cell, Choice, FlowTable, ModelError
+from huffman_eda.render import entry_text
 
-__all__ = ["ParseError", "dump_table", "load_table", "parse_cell"]
+__all__ = [
+    "ParseError",
+    "dump_markdown",
+    "dump_table",
+    "load_markdown",
+    "load_table",
+    "parse_cell",
+    "parse_markdown",
+]
 
 _OUTS_RE = re.compile(r"^[01-]+$")
 _INT_RE = re.compile(r"^\d+$")
 _YAML_SUFFIXES = (".yaml", ".yml")
+_FRONT_MATTER_RE = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*\r?\n?(.*)\Z", re.DOTALL)
+_SEPARATOR_RE = re.compile(r"^:?-+:?$")
 
 
 class ParseError(ValueError):
@@ -248,3 +260,104 @@ def _state(value: Any, what: str) -> int:
     if isinstance(value, str) and _INT_RE.match(value):
         return int(value)
     raise ParseError(f"{what} must be an integer, got {value!r}")
+
+
+# --- Markdown transcription format (T204) -------------------------------------
+
+
+def load_markdown(path: Path) -> FlowTable:
+    """Load a table from a Markdown file with YAML front matter."""
+    path = Path(path)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ParseError(f"cannot read {path}: {exc}") from exc
+    return parse_markdown(text)
+
+
+def parse_markdown(text: str) -> FlowTable:
+    """Parse the transcription format: YAML front matter plus one Markdown table.
+
+    The header names the columns in whatever order the transcription used, cells are
+    written in the §2 grammar with any ``|`` inside a cell escaped as ``\\|``.
+    """
+    front, body = _split_front_matter(text)
+    try:
+        document: Any = yaml.safe_load(front)
+    except yaml.YAMLError as exc:
+        raise ParseError(f"invalid front matter: {exc}") from exc
+    if not isinstance(document, dict):
+        raise ParseError("the front matter must be a mapping of name, inputs, outputs, reset")
+
+    lines = [line for line in body.splitlines() if line.strip()]
+    if len(lines) < 3:
+        raise ParseError(
+            "expected a Markdown table: a header, a separator row and at least one row"
+        )
+    header = _split_row(lines[0])
+    if header[0].strip().lower() != "state":
+        raise ParseError(f"the first header cell must be 'state', got {header[0]!r}")
+    columns = header[1:]
+    if not all(_SEPARATOR_RE.match(cell) for cell in _split_row(lines[1])):
+        raise ParseError(f"expected a '|---|' separator row, got {lines[1]!r}")
+
+    rows: dict[int, dict[str, str]] = {}
+    for line in lines[2:]:
+        cells = _split_row(line)
+        if len(cells) != len(header):
+            raise ParseError(
+                f"expected {len(header)} cells, got {len(cells)}: is a '|' missing its "
+                f"escape as '\\|'?",
+                text=line,
+            )
+        rows[_state(cells[0], "row key")] = dict(zip(columns, cells[1:], strict=True))
+    # table_from_dict parses every cell and validates columns, so a bad cell or a bad
+    # header column fails the same way it would in YAML.
+    return table_from_dict({**document, "rows": rows})
+
+
+def dump_markdown(table: FlowTable) -> str:
+    """Render a table as front matter plus a Markdown table.
+
+    Columns are written in Gray order, which is how the book's tables are transcribed;
+    a pipe inside a cell is escaped so the table stays parseable. Reloading the output
+    with :func:`parse_markdown` is lossless.
+    """
+    lines = [
+        "---",
+        f"name: {table.name}",
+        f"inputs: [{', '.join(table.inputs)}]",
+        f"outputs: [{', '.join(table.outputs)}]",
+        f'reset: [{table.reset[0]}, "{table.reset[1]}"]',
+        "---",
+        "",
+    ]
+    columns = gray_columns(len(table.inputs))
+    lines.append("| state | " + " | ".join(columns) + " |")
+    lines.append("|" + "---|" * (len(columns) + 1))
+    for state in table.states():
+        cells = [_escape_cell(entry_text(table, state, column)) for column in columns]
+        lines.append(f"| {state} | " + " | ".join(cells) + " |")
+    return "\n".join(lines) + "\n"
+
+
+def _split_front_matter(text: str) -> tuple[str, str]:
+    match = _FRONT_MATTER_RE.match(text)
+    if match is None:
+        raise ParseError("expected YAML front matter delimited by '---' lines")
+    return match.group(1), match.group(2)
+
+
+def _split_row(line: str) -> list[str]:
+    """Split a Markdown table row on unescaped pipes, then unescape ``\\|``."""
+    text = line.strip()
+    if text.startswith("|"):
+        text = text[1:]
+    if text.endswith("|") and not text.endswith("\\|"):
+        text = text[:-1]
+    return [cell.strip().replace("\\|", "|") for cell in re.split(r"(?<!\\)\|", text)]
+
+
+def _escape_cell(text: str) -> str:
+    """Escape a cell for a Markdown table: the §2 choice separator becomes ``\\|``."""
+    return text.replace("|", "\\|")
