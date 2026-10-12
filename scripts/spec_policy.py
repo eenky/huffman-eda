@@ -40,9 +40,8 @@ GOVERNANCE = (
     "scripts/setup_governance.sh",
 )
 REFERENCE = ("reference/", "tests/test_reference_diff.py")
-SPEC = (SEMANTICS, LOCK, "tests/golden/", "tests/golden_pairs/")
+SPEC = (SEMANTICS, LOCK, "tests/golden")  # every tests/golden*/ directory
 NEUTRAL = ("tasks/", "docs/ROADMAP.md", "docs/ARCHITECTURE.md", "README.md")
-GOLDEN_ROOTS = ("tests/golden/", "tests/golden_pairs/")
 WEAKENERS = re.compile(
     r"pytest\.skip|\bxfail\b|importorskip|#\s*type:\s*ignore|#\s*noqa|pragma:\s*no cover"
 )
@@ -101,7 +100,15 @@ def lock_violations(
     return errs
 
 
+def _is_golden(path: str) -> bool:
+    """True for files inside any tests/golden*/ directory."""
+    parts = path.split("/")
+    return len(parts) >= 3 and parts[0] == "tests" and parts[1].startswith("golden")
+
+
 def _kind(path: str) -> str:
+    if _is_golden(path):
+        return "spec"
     for name, prefixes in (
         ("governance", GOVERNANCE),
         ("reference", REFERENCE),
@@ -153,9 +160,7 @@ def check(base: str, head: str, author: str) -> list[str]:
     base_lock = json.loads(_show(base, LOCK) or "{}")
     head_lock = json.loads(_show(head, LOCK) or "{}")
     frozen_edits = [
-        f"{status} {path}"
-        for status, path in changes
-        if status in "MD" and path.startswith(GOLDEN_ROOTS)
+        f"{status} {path}" for status, path in changes if status in "MD" and _is_golden(path)
     ]
     for group in ("sections", "files"):
         for key, digest in base_lock.get(group, {}).items():
@@ -170,7 +175,7 @@ def check(base: str, head: str, author: str) -> list[str]:
     new_cases = {
         "/".join(path.split("/")[:3])
         for status, path in changes
-        if status == "A" and path.startswith(GOLDEN_ROOTS) and path.count("/") >= 3
+        if status == "A" and _is_golden(path) and path.count("/") >= 3
     }
     for case in sorted(new_cases):
         raw = _show(head, f"{case}/expected.json")
@@ -206,7 +211,8 @@ def check(base: str, head: str, author: str) -> list[str]:
     for line in diff.splitlines():
         if line.startswith("+++ "):
             current = line[6:]
-        elif line.startswith("+") and WEAKENERS.search(line):
+        elif line.startswith("+") and WEAKENERS.search(line) and not _is_golden(current):
+            # golden harnesses are locked spec files that skip until their module exists
             errs.append(f"P7: weakening marker added in {current}: {line[1:].strip()}")
 
     return errs
