@@ -12,6 +12,7 @@ run in the interim says which piece is absent instead of failing obscurely.
 from __future__ import annotations
 
 from importlib import import_module
+from typing import Any
 
 from huffman_eda.minimize.compat import (
     PRECONDITION_RULES,
@@ -55,8 +56,12 @@ _PENDING: dict[str, str] = {
 _TASK: dict[str, str] = {"compatibles": "T402", "cover": "T403", "reduce": "T404"}
 
 
-def __getattr__(name: str) -> object:
-    """Resolve a §9.8 name that a later task owns, on first use (PEP 562)."""
+def __getattr__(name: str) -> Any:
+    """Resolve a §9.8 name that a later task owns, on first use (PEP 562).
+
+    Returns ``Any`` because the name's real signature lives in a module that may not
+    exist yet; each of those modules is itself checked under ``mypy --strict``.
+    """
     module_name = _PENDING.get(name)
     if module_name is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
