@@ -1,6 +1,6 @@
 {
   "files": {
-    "tests/golden_assign/test_golden_assign.py": "3d3867a5fb2aa5badfb076cd252f21afb0837cfc8bd44abe28fc79e04623b1bf",
+    "tests/golden_assign/test_golden_assign.py": "3fb2195bbc1b132696b88fdcec23f5a7b8f75fffa8ad69ee066e527906ffa608",
     "tests/golden_minimize/test_golden_minimize.py": "4138bf42b28a8c80a67066189a8a3a757f6bb5ac7e46cb720c3d782a486c0882",
     "tests/golden_pairs/test_golden_pairs.py": "754d1697e4915f64eac3ae14970186b05fe1be0e03f8e85102568d1655160b30",
     "tests/test_golden.py": "f9abb6a0e7c56a65deebee6d18b05c3e9f7fa7903347f66c695c1833e1195ec6"
