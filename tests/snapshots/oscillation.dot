@@ -1,0 +1,7 @@
+digraph behavior {
+  rankdir=LR;
+  node [shape=box];
+  n_1_0 [label="1@0 / 0"];
+  sink_oscillation [label="OSCILLATION", shape=oval, color=red, fontcolor=red];
+  n_1_0 -> sink_oscillation [label="x", style=dashed, color=red];
+}

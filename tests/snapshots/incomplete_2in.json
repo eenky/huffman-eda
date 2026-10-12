@@ -1,0 +1,67 @@
+{
+  "reset_ok": true,
+  "nodes": [
+    {
+      "state": 1,
+      "column": "00"
+    },
+    {
+      "state": 2,
+      "column": "01"
+    }
+  ],
+  "edges": [
+    {
+      "src_state": 1,
+      "src_column": "00",
+      "dst_column": "01",
+      "flipped": 1,
+      "outcome": "stable",
+      "path": [
+        1,
+        2
+      ],
+      "final": 2,
+      "cycle": []
+    },
+    {
+      "src_state": 1,
+      "src_column": "00",
+      "dst_column": "10",
+      "flipped": 0,
+      "outcome": "undefined",
+      "path": [
+        1
+      ],
+      "final": 1,
+      "cycle": []
+    },
+    {
+      "src_state": 2,
+      "src_column": "01",
+      "dst_column": "00",
+      "flipped": 1,
+      "outcome": "stable",
+      "path": [
+        2,
+        1
+      ],
+      "final": 1,
+      "cycle": []
+    },
+    {
+      "src_state": 2,
+      "src_column": "01",
+      "dst_column": "11",
+      "flipped": 0,
+      "outcome": "undefined",
+      "path": [
+        2,
+        3,
+        4
+      ],
+      "final": 4,
+      "cycle": []
+    }
+  ]
+}
