@@ -34,6 +34,7 @@ from huffman_eda.minimize import (
 )
 from huffman_eda.model import Cell, Choice, FlowTable
 from huffman_eda.validate import validate
+from reference import assign_ref as aref
 from reference import huffman_ref as ref
 from reference import minimize_ref as mref
 
@@ -331,3 +332,101 @@ def test_production_agrees_with_reference_on_minimization(mutant: bool) -> None:
         assert _production_shape(minimize(table)) == _reference_shape(mref.reduce(t, cover)), (
             context
         )
+
+
+# ------------------------------------------------- §10 (state assignment)
+
+
+ASSIGN = sorted(p for p in (ROOT / "golden_assign").iterdir() if (p / "table.yaml").exists())
+
+
+@pytest.mark.parametrize("table_path", ASSIGN, ids=lambda p: p.name)
+def test_reference_reproduces_golden_assign(table_path: Path) -> None:
+    """The reference alone, against §10's golden data."""
+    t = ref.load(table_path / "table.yaml")
+    want = json.loads((table_path / "expected.json").read_text())
+
+    pre = aref.violated_precondition(t)
+    if want["precondition"] != "ok":
+        assert pre == want["precondition"]
+        return
+    assert pre == []
+
+    if "encoding" in want:
+        codes = {int(s): int(c, 2) for s, c in want["encoding"].items()}
+        k = len(next(iter(want["encoding"].values())))
+        got = [
+            {"rule": rule, "state": state, "column": column, "path": list(path)}
+            for rule, state, column, path in aref.races(t, codes, k)
+        ]
+        assert got == want["diagnostics"]
+
+    if "min_state_variables" in want:
+        assert aref.minimum_variables(t) == want["min_state_variables"]
+        covers = [[[sorted(m[0]), sorted(m[1])] for m in cover] for cover in aref.minimum_covers(t)]
+        assert covers == want["min_covers"]
+        codes, cover = aref.tracey(t)
+        assert {str(s): format(c, f"0{len(cover)}b") for s, c in codes.items()} == want["codes"]
+
+
+@pytest.mark.parametrize("mutant", [False, True], ids=["random", "single-change-mutant"])
+def test_production_agrees_with_reference_on_assignment(mutant: bool) -> None:
+    """§10: production and the reference agree, on seeded normal tables and their mutants.
+
+    The reference is brute force, so agreement here is not agreement between two spellings of
+    the same algorithm: it is the minimum number of variables checked against exhaustion, the
+    cover against every candidate cover, and every diagnostic against every intermediate code.
+    """
+    from huffman_eda.assign import (
+        AssignmentError,
+        assign,
+        check_precondition,
+        critical_races,
+        decode,
+        encode,
+        tracey,
+    )
+
+    rng = random.Random(SEED + (31 if mutant else 30))
+    checked = 0
+    for _ in range(400):
+        if checked >= 25:
+            break
+        source = _random_normal(rng)
+        if mutant:
+            _mutate_one_cell(rng, source)
+        reference_codes, reference_cover = aref.tracey(source)
+        variables = len(reference_cover)
+        table = _to_production(source)
+        rules = aref.violated_precondition(source)
+        try:
+            check_precondition(table)
+        except AssignmentError as error:
+            assert list(error.rules) == rules, (source.rows, source.reset)
+            continue
+        assert rules == [], (source.rows, source.reset)
+        checked += 1
+
+        context = (source.rows, source.reset)
+        encoded = encode(table, reference_codes, bits=variables)
+        got = [(d.rule, d.state, d.column, tuple(d.path)) for d in critical_races(encoded)]
+        assert sorted(got) == sorted(aref.races(source, reference_codes, variables)), context
+
+        assignment = tracey(table)
+        assert len(assignment.variables) == variables, context
+        got_cover = [[sorted(m[0]), sorted(m[1])] for m in assignment.variables]
+        want_cover = [[sorted(m[0]), sorted(m[1])] for m in reference_cover]
+        assert got_cover == want_cover, context
+        assert {s: format(c, f"0{variables}b") for s, c in assignment.codes.items()} == {
+            s: format(c, f"0{variables}b") for s, c in reference_codes.items()
+        }, context
+
+        # §10.7.3: the minimum itself, against exhaustion over every injective assignment
+        if not mutant and len(source.rows) <= 4:
+            assert len(assignment.variables) == aref.minimum_variables(source), context
+
+        # §10.6: decoding both ways gives the same table back
+        assert _production_shape(decode(assign(table))) == _reference_shape(
+            aref.decode(source, assignment.codes, variables)
+        ), context
+    assert checked >= 10, f"only {checked} eligible tables were compared"
