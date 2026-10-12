@@ -38,8 +38,20 @@ jobs:
           else
             echo "approved=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Did the author app approve this head commit? (gates reviewer PRs only)
+        id: peer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUTHOR_LOGIN: ${{ vars.AUTHOR_LOGIN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          n=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews" --paginate \
+            --jq "[.[] | select(.user.login==\"$AUTHOR_LOGIN\" and .state==\"APPROVED\" and .commit_id==\"$HEAD_SHA\")] | length")
+          echo "author-app approvals on head: ${n:-0}"
+          if [ -n "$AUTHOR_LOGIN" ] && [ "${n:-0}" -gt 0 ]; then echo "approved=true" >> "$GITHUB_OUTPUT"; else echo "approved=false" >> "$GITHUB_OUTPUT"; fi
       - name: Check policy
         env:
+          PEER_APPROVED: ${{ steps.peer.outputs.approved }}
           OWNER_LOGIN: ${{ vars.OWNER_LOGIN }}
           REVIEWER_LOGIN: ${{ vars.REVIEWER_LOGIN }}
           OWNER_APPROVED: ${{ steps.approval.outputs.approved }}

@@ -13,8 +13,11 @@ time.
 
 ## Roles
 
-Two agents work here, under two separate GitHub identities. The separation is enforced by
-`scripts/spec_policy.py`, which runs from `main` and cannot be changed by either agent.
+Two agents work here, each as its own GitHub App (`hfe-author[bot]`, `hfe-reviewer[bot]`),
+using a token minted from its own key by `scripts/app_token.sh`. Never use any other
+credentials. The separation is enforced by `scripts/spec_policy.py`, which runs from `main`
+and cannot be changed by either agent. It is also enforced by GitHub itself: the author app
+has no `workflows` permission, and only the reviewer app can post `reviewer-verdict`.
 
 | Role | Identity | May change | Never changes |
 |---|---|---|---|
@@ -22,11 +25,14 @@ Two agents work here, under two separate GitHub identities. The separation is en
 | **Reviewer** (see REVIEWER.md) | `vars.REVIEWER_LOGIN` | `reference/`, `tests/test_reference_diff.py`, corrections to frozen ground truth (owner-approved only) | `src/`, `tests/` |
 | **Owner** | `vars.OWNER_LOGIN` | anything | |
 
-Governance files are `.github/**`, `AGENTS.md`, `REVIEWER.md`, and `scripts/spec_policy.py`.
+Governance files are `.github/**`, `AGENTS.md`, `REVIEWER.md`, `scripts/spec_policy.py`,
+`scripts/app_token.sh`, `scripts/reviewer_verdict.sh`, and `scripts/setup_governance.sh`.
 Only the owner changes them.
 
-Every PR needs an approving review from an identity other than its author, plus green
-`test` and `spec-policy` checks. The author enables auto-merge (`gh pr merge --auto --squash`)
+Every PR needs three green checks on its current head commit: `test`, `spec-policy`, and
+`reviewer-verdict`. The last is posted only by the reviewer app, and it never applies to the
+reviewer's own PRs (see below). A push creates a new head commit with no verdict, so every
+push needs a fresh review. The author enables auto-merge (`gh pr merge --auto --squash`)
 and never merges by any other route. Never add or remove the `owner-approved` label.
 
 ## Two kinds of PR, never mixed
@@ -65,9 +71,14 @@ stop and open the spec PR first. The implementation PR waits until that is merge
 2. Branch `task/T<id>-<slug>` from the latest `main`.
 3. Implement only that task, touching only the paths listed under **May touch**.
 4. Run the Definition of Done locally. All of it must pass.
-5. Open the PR using the template, enable auto-merge, and request review from the reviewer.
+5. Open the PR using the template, enable auto-merge, and ask the reviewer agent to review it
+   (link the PR in the reviewer's queue).
 6. Fix CI failures and review comments **on the same branch**.
-7. Every claim in a PR (a mutant is unobservable, a case is excluded, a bound is sound)
+7. When the reviewer opens a reference PR, review it as a peer. Check that it reads only
+   SEMANTICS, imports nothing from `src/`, has no weakened assertions, and that its planted-bug
+   evidence is real. Then `gh pr review <n> --approve` and add the `peer-reviewed` label.
+   Approve only what you have checked.
+8. Every claim in a PR (a mutant is unobservable, a case is excluded, a bound is sound)
    must cite the test or command that demonstrates it.
 
 ## Protected ground truth
