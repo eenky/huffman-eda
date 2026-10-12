@@ -20,6 +20,7 @@ import typer
 from rich.console import Console
 
 from huffman_eda.diagnostics import Report
+from huffman_eda.equiv import implements
 from huffman_eda.explore import explore
 from huffman_eda.graph_export import to_dot, to_json
 from huffman_eda.io import ParseError, dump_table, load_markdown, load_table
@@ -42,6 +43,7 @@ app = typer.Typer(
 )
 
 FileArgument = Annotated[Path, typer.Argument(metavar="FILE", help=_FILE_HELP)]
+ImplArgument = Annotated[Path, typer.Argument(metavar="IMPL", help=_FILE_HELP)]
 MarkdownArgument = Annotated[
     Path, typer.Argument(metavar="FILE", help="Markdown transcription: .md")
 ]
@@ -170,3 +172,41 @@ def import_command(
     output.write_text(dump_table(table), encoding="utf-8")
     typer.echo(f"wrote {output}")
     _exit(report)
+
+
+@app.command("equiv")
+def equiv_command(
+    spec_file: FileArgument,
+    impl_file: ImplArgument,
+) -> None:
+    """Check that IMPL implements SPEC (SEMANTICS §8) and print the counterexample."""
+    spec = _load(spec_file)
+    impl = _load(impl_file)
+    try:
+        result = implements(spec, impl)
+    except ValueError as error:
+        # §8.1: mismatched inputs or outputs are a usage error, not a counterexample.
+        typer.echo(str(error), err=True)
+        raise typer.Exit(USAGE) from error
+
+    typer.echo(f"{spec_file} -> {impl_file}: {'holds' if result.ok else 'fails'}")
+    counterexample = result.counterexample
+    if counterexample is None:
+        reverse = implements(impl, spec).ok
+        typer.echo(
+            f"  {impl_file} -> {spec_file}: {'holds' if reverse else 'fails'}"
+            f" (equivalent: {'yes' if reverse else 'no'})"
+        )
+        raise typer.Exit(OK)
+    typer.echo(f"  trace: {_trace_text(counterexample.trace)}")
+    typer.echo(f"  kind:  {counterexample.kind}")
+    if counterexample.output is not None:
+        typer.echo(f"  output: {counterexample.output}")
+    if counterexample.outcome is not None:
+        typer.echo(f"  outcome: {counterexample.outcome}")
+    raise typer.Exit(DIAGNOSTICS)
+
+
+def _trace_text(trace: tuple[str, ...]) -> str:
+    """The counterexample trace: columns applied after the reset, in order (§8.5)."""
+    return " ".join(trace) if trace else "<empty> (the reset itself)"
