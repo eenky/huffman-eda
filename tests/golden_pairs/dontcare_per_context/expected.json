@@ -1,0 +1,12 @@
+{
+  "implements_ab": {"ok": true, "counterexample": null},
+  "implements_ba": {
+    "ok": false,
+    "counterexample": {"trace": ["1"], "kind": "OUTPUT_MISMATCH", "output": "z", "outcome": null}
+  },
+  "derivation": [
+    "a's stable (2,1) has z='-'. b visits it as b-state 2 (z=0) on odd cycles and b-state 4 (z=1) on even cycles.",
+    "implements(a,b): pairs (1,1)->(2,2)->(1,3)->(2,4)->(1,1); every check passes. This holds only because '-' resolves per context (8.3).",
+    "implements(b,a): spec b requires z=0 at (2,1) after trace [1]; a gives '-', which is incompatible (8.2)."
+  ]
+}

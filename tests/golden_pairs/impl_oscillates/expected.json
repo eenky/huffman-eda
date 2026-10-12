@@ -1,0 +1,11 @@
+{
+  "implements_ab": {
+    "ok": false,
+    "counterexample": {"trace": ["1"], "kind": "IMPL_NOT_STABLE", "output": null, "outcome": "OSCILLATION"}
+  },
+  "implements_ba": {"ok": true, "counterexample": null},
+  "derivation": [
+    "implements(a,b): a settles STABLE on x rise; b oscillates, so check 1 fails.",
+    "implements(b,a): spec b oscillates on x rise, so that step is unconstrained and nothing else is reachable. It holds vacuously beyond the reset check."
+  ]
+}
