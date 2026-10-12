@@ -239,11 +239,149 @@ Counterexample.to_dict() -> {"trace": [...], "kind": ..., "output": ..., "outcom
 
   Every gated verdict must match. There is no percentage threshold.
 
-## 9+. Reserved
+## 9. State minimization
+
+`minimize(T)` returns a flow table with as few states as possible that implements `T` in the
+sense of §8. This is the classical theory of incompletely specified machines (compatibles,
+closed covers, Grasselli–Luccio prime compatibles), restricted here so that it is sound for
+*settling*. A flow table settles through several steps in one column, where a clocked machine
+would take a single step per input.
+
+### 9.1 Precondition
+
+`minimize` and everything in this section apply only to a table `T` with:
+- `explore(T).reset_ok` (no FT000),
+- no FT001 (every cell has at most one choice),
+- no FT003 and no FT004. Together these say `T` is **normal**: every specified, unstable
+  entry `(s,c)` leads in one step to a stable entry `(next(s,c), c)`.
+
+Otherwise each function in this section raises `MinimizationError`, whose `rules` attribute
+is the sorted tuple of the violated rule IDs.
+
+Normality is necessary, not a convenience. The golden case `non_normal_rejected` contains a
+non-normal table that has a closed cover (§9.4) whose reduced table (§9.6) never reaches a
+stable reset state. Under the precondition, every next state has a row, so the state set
+is `S = states(T)`, the states with rows.
+
+### 9.2 Compatibility
+
+- States `p` and `q` are **output-compatible** iff, for every column `c` where both `(p,c)` and
+  `(q,c)` are stable, their outputs agree on every bit where both specify a value. Only stable
+  entries are compared, because transient outputs are not observables (§8.2) and the reduced
+  table does not keep them (§9.6).
+- The set `I` of **incompatible pairs** is the least set of unordered pairs `{p,q}`, `p ≠ q`, that
+  contains every output-incompatible pair and is closed under implication. That is, `{p,q} ∈ I`
+  whenever, for some column `c`, both `(p,c)` and `(q,c)` are specified, `next(p,c) ≠ next(q,c)`,
+  and `{next(p,c), next(q,c)} ∈ I`. Compute it by iterating to a fixpoint.
+- A **compatible** is a non-empty set `C ⊆ S` that contains no pair in `I`. Every singleton is a
+  compatible, and every subset of a compatible is a compatible.
+
+### 9.3 Implied sets, class sets, maximal and prime compatibles
+
+- Implied set: `N(C,c) = { next(x,c) : x ∈ C, (x,c) specified }`.
+- Class set: `Γ(C) = { N(C,c) : c a column, |N(C,c)| ≥ 2, N(C,c) ⊄ C }`.
+- A **maximal compatible** is a compatible not strictly contained in another compatible.
+- A **prime compatible** is a compatible `C` for which no compatible `C' ⊋ C` has
+  `Γ(C') ⊆ Γ(C)` (plain set inclusion of class sets). Every maximal compatible is prime.
+
+### 9.4 Closed covers
+
+A set `K` of compatibles is a **closed cover** iff:
+1. every state of `S` is in some member of `K`, and
+2. for every `C ∈ K` and column `c` with `|N(C,c)| ≥ 2`, some `D ∈ K` satisfies `N(C,c) ⊆ D`.
+
+A **minimum closed cover** is a closed cover of least size. At least one minimum closed
+cover consists only of prime compatibles. `min_closed_cover` returns such a cover, and when
+several exist, any one of them is correct. Members of a cover may overlap, and sometimes
+must: see the golden case `overlap_required`.
+
+### 9.5 Canonical order
+
+Sets of states are ordered by comparing their sorted state tuples lexicographically. Every
+function returns collections of compatibles in this order. In `reduce`, the cover member at
+position `i` (1-based) becomes reduced state `i`.
+
+### 9.6 The reduced table `reduce(T, K)`
+
+`K` must be a closed cover of `T`. The result has the same inputs and outputs as `T`. Write
+`C_i` for the `i`-th member of `K` in canonical order. Then:
+
+- `choose(C, N) = C` if `N ⊆ C`. Otherwise it is the first member of `K`, in canonical order,
+  that contains `N`. Such a member exists by closure when `|N| ≥ 2`, and by covering when
+  `|N| = 1`.
+- For each `C_i` and column `c`, let `N = N(C_i, c)` and `D = choose(C_i, N)`:
+  - if `N` is empty, the entry is unspecified;
+  - if `D = C_i`, the entry is **stable**: `[i]`, where output bit `j` is the specified value
+    of `out_j(x,c)` among the members `x ∈ C_i` with `(x,c)` stable, or `-` if none
+    specifies it. Output-compatibility makes this value unique;
+  - otherwise the entry is `index(D)`, with every output bit `-`.
+- Reset: let `r` be the reset state and `c0` the reset column. Start from the first member
+  containing `r`, apply `C ← choose(C, N(C, c0))` until `C` stops changing, and use
+  `(index(C), c0)` as the reset.
+
+**Decision: transient outputs are `-`.** §8 observes only stable outputs, and a `-` can never
+create a §8 `HAZARD`, since FT007 counts only specified values. Assigning transient outputs is
+deferred to the hazard-free logic step (§12), where the standard rule applies: a transient
+between two equal stable outputs must hold that value, and one between different stable
+outputs may change only once. Both are determined by stable outputs alone, so this decision
+loses nothing.
+
+### 9.7 Correctness (normative consequence, tested)
+
+For every `T` satisfying §9.1 and every closed cover `K` of `T`: `implements(T, reduce(T, K))`.
+
+Proof sketch, for a single settle of `T` from stable `(s, c_prev)` into column `c`, where
+the reduced table is in a class `C ∋ s`:
+1. By normality, `T` ends at `t = next(s,c)`, which is stable in `c`, and every implied set in
+   column `c` consists of states stable in `c`.
+2. The reduced table visits `X_1 = choose(C, N(C,c)), X_2, ...`, with each `X_{k+1} ⊇ N(X_k, c)`.
+   The members of `N(X_k, c)` are stable, so each maps to itself, giving
+   `N(X_{k+1}, c) ⊇ N(X_k, c)`. These sets increase within `S`, so after fewer than `|S|`
+   steps some `X_{k+1} ⊇ N(X_{k+1}, c)`, and `choose` keeps it. The reduced table is then
+   stable.
+3. `t ∈ N(C,c)`, and `t` stays in every later implied set, so the final class contains `t`.
+   Its stable output agrees with `t`'s output on every bit `t` specifies (§9.2).
+4. Every reduced transient output is `-`, so no `HAZARD` can occur. The same argument from `r`
+   in `c0` justifies the reset.
+
+### 9.8 API (module `huffman_eda.minimize`)
+
+All functions check §9.1 first. Functions that are exponential in the worst case take a
+keyword `limit` and raise `LimitExceeded` when it is exceeded.
+
+```
+class MinimizationError(ValueError)      # .rules: tuple[str, ...]
+class LimitExceeded(RuntimeError)
+check_precondition(table) -> None
+incompatible_pairs(table) -> frozenset[tuple[int, int]]        # (p, q) with p < q
+implied(table, states: frozenset[int], column: str) -> frozenset[int]
+class_set(table, states: frozenset[int]) -> frozenset[frozenset[int]]
+maximal_compatibles(table, *, limit: int = 10_000) -> tuple[frozenset[int], ...]
+prime_compatibles(table, *, limit: int = 10_000) -> tuple[frozenset[int], ...]
+is_closed_cover(table, cover) -> bool
+min_closed_cover(table, *, limit: int = 100_000) -> tuple[frozenset[int], ...]
+reduce(table, cover) -> FlowTable                              # raises ValueError if cover not closed
+minimize(table, *, limit: int = 100_000) -> FlowTable          # reduce(table, min_closed_cover(table))
+```
+
+### 9.9 Golden cases
+
+`tests/golden_minimize/<case>/{table.yaml, expected.json}`. The `expected.json` file holds one
+of the following:
+- for a table that fails §9.1: `{"precondition": ["FT004", ...], ...}`;
+- otherwise: `"precondition": "ok"`, `incompatible_pairs`, `maximal_compatibles`,
+  `prime_compatibles`, `min_cover_size`, `min_closed_covers` (every minimum closed cover made of
+  prime compatibles, each in canonical order), and `reduced` (the `cover`, `rows` in cell
+  notation, and `reset` of `reduce(T, cover)` for one of those covers). It may also hold
+  `not_closed`: covers of `S` that are not closed, for which `is_closed_cover` must return
+  false and `reduce` must raise `ValueError`.
+
+Every case also carries `derivation` and `source`.
+
+## 10+. Reserved
 
 | Section | Milestone | Topic |
 |---|---|---|
-| 9 | M4 | Compatibility, closed covers, reduced tables |
 | 10 | M5 | Encoded tables, races, critical races |
 | 11 | M6 | Gate netlist IR and ternary simulation |
 | 12 | M7 | Hazard-free covers under SIC |

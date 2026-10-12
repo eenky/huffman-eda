@@ -10,12 +10,11 @@ src/huffman_eda/minimize/cover.py, tests/test_cover.py
 tests/golden/**, tests/test_golden.py, docs/SEMANTICS.md, AGENTS.md, .github/**
 
 ## Spec
-Exact branch-and-bound over prime compatibles: the cover must contain every state and be
-closed under class sets. Take `limit` and raise `LimitExceeded`. Return the cover and a
-proof object (for each class set, the cover member containing it) for independent
-checking.
+All functions are those of SEMANTICS §9.8, in the package `huffman_eda.minimize`. Each checks §9.1 first and raises `MinimizationError` with the violated rule IDs.
+Implement `is_closed_cover` (§9.4) and `min_closed_cover`: an exact branch-and-bound over prime
+compatibles that returns a minimum closed cover in canonical order, taking `limit`.
 
 ## Acceptance
-Golden minimum sizes match. Property: the returned cover passes an independent
-`check_closed_cover`, and for tables with 6 or fewer states, brute force confirms
-minimality.
+- The `min_cover_size`, `min_closed_covers` and `not_closed` assertions pass for every golden case.
+- Property: on random tables satisfying §9.1 with at most 6 states, the returned cover's size
+  equals the minimum found by exhaustive search over all compatibles (not just primes).

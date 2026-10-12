@@ -10,10 +10,16 @@ src/huffman_eda/minimize/__init__.py, src/huffman_eda/minimize/compat.py, tests/
 tests/golden/**, tests/test_golden.py, docs/SEMANTICS.md, AGENTS.md, .github/**
 
 ## Spec
-`compatibility(table) -> CompatTable` with every pair's status and, for each
-incompatible pair, the reason chain (an output conflict or an implied incompatible pair).
-Iterate to a fixed point as in §9.
+All functions are those of SEMANTICS §9.8, in the package `huffman_eda.minimize`. Each checks §9.1 first and raises `MinimizationError` with the violated rule IDs.
+Implement `MinimizationError`, `LimitExceeded`, `check_precondition`, `incompatible_pairs` (§9.2:
+compare **stable** outputs only, then the implication fixpoint), `implied`, and `class_set` (§9.3).
+A helper that returns, for each incompatible pair, the reason (an output conflict at column c, or
+implied by pair (p',q') at column c) is welcome. It is informative only; golden data checks
+the set.
 
 ## Acceptance
-Golden incompatible-pair sets match. Property: compatibility is reflexive and symmetric,
-and output-conflicting pairs are always incompatible.
+- `tests/golden_minimize`: the `precondition` and `incompatible_pairs` assertions pass for every
+  case. The later assertions in each case may still fail until T402–T404 are done, so record
+  progress in the PR.
+- Property: on random tables satisfying §9.1, the set is symmetric and contains every
+  output-incompatible pair, and every pair it omits has no implied pair inside it.
