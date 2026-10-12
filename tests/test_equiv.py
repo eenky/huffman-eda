@@ -33,6 +33,14 @@ SLOW = settings(
     suppress_health_check=[HealthCheck.too_slow, HealthCheck.filter_too_much],
 )
 
+# M3's exit criterion is `equiv(T, T)` holding for 1000 random tables (docs/ROADMAP.md).
+CRITERION = settings(
+    max_examples=1000,
+    deadline=None,
+    database=None,
+    suppress_health_check=[HealthCheck.too_slow, HealthCheck.filter_too_much],
+)
+
 # A two-state toggle: the shape most of these tests start from.
 TOGGLE = {1: {"0": "[1],0", "1": "2,-"}, 2: {"0": "1,-", "1": "[2],1"}}
 
@@ -343,12 +351,14 @@ def test_requires_identical_output_names() -> None:
 # --- properties --------------------------------------------------------------
 
 
-@SLOW
+@CRITERION
 @given(table=flow_tables(2, 2, 6, complete=True))
 def test_a_random_complete_table_implements_itself(table: FlowTable) -> None:
+    """M3's exit criterion: `equiv(T, T)` over 1000 random tables."""
     result = implements(table, table)
     assert result.ok is True
     assert result.counterexample is None
+    assert equivalent(table, table) is True
 
 
 @SLOW
