@@ -22,7 +22,7 @@ from rich.console import Console
 from huffman_eda.diagnostics import Report
 from huffman_eda.explore import explore
 from huffman_eda.graph_export import to_dot, to_json
-from huffman_eda.io import ParseError, dump_table, load_table
+from huffman_eda.io import ParseError, dump_table, load_markdown, load_table
 from huffman_eda.model import FlowTable
 from huffman_eda.render import render_rich, render_text
 from huffman_eda.validate import validate
@@ -42,6 +42,10 @@ app = typer.Typer(
 )
 
 FileArgument = Annotated[Path, typer.Argument(metavar="FILE", help=_FILE_HELP)]
+MarkdownArgument = Annotated[
+    Path, typer.Argument(metavar="FILE", help="Markdown transcription: .md")
+]
+OutputOption = Annotated[Path, typer.Option("-o", "--output", help="YAML file to write")]
 JsonOption = Annotated[bool, typer.Option("--json", help="print Report.to_dict() instead")]
 PlainOption = Annotated[bool, typer.Option("--plain", help="plain text instead of a rich table")]
 FormatOption = Annotated[str, typer.Option("--format", help="json or dot")]
@@ -52,6 +56,15 @@ def _load(path: Path) -> FlowTable:
     """Load a table, turning any §2 violation into exit code 2."""
     try:
         return load_table(path)
+    except ParseError as error:
+        typer.echo(f"{path}:{_field(error.row)}:{_field(error.column)}: {error.reason}", err=True)
+        raise typer.Exit(USAGE) from error
+
+
+def _load_markdown(path: Path) -> FlowTable:
+    """Load a Markdown transcription, turning any §2 violation into exit code 2."""
+    try:
+        return load_markdown(path)
     except ParseError as error:
         typer.echo(f"{path}:{_field(error.row)}:{_field(error.column)}: {error.reason}", err=True)
         raise typer.Exit(USAGE) from error
@@ -144,3 +157,16 @@ def fmt_command(
     else:
         typer.echo(canonical, nl=False)
     _exit(validate(table))
+
+
+@app.command("import")
+def import_command(
+    file: MarkdownArgument,
+    output: OutputOption,
+) -> None:
+    """Convert a Markdown transcription into canonical YAML."""
+    table = _load_markdown(file)
+    report = validate(table)
+    output.write_text(dump_table(table), encoding="utf-8")
+    typer.echo(f"wrote {output}")
+    _exit(report)
