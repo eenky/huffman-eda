@@ -1,0 +1,10 @@
+{
+  "precondition": [
+    "FT004"
+  ],
+  "derivation": [
+    "(3,0) goes to 2, but (2,0) is unstable. (4,0) goes to 3, and (4,1) goes to 2, both unstable targets. That is FT004, so \u00a79.1 rejects the table.",
+    "Why the precondition exists: under the classical definitions without \u00a79.1, {1,3},{1,2,4} is a closed cover of this table. Settling its reduced reset in column 0 alternates between the two classes forever."
+  ],
+  "source": "synthetic"
+}

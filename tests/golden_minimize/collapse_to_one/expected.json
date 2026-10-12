@@ -1,0 +1,57 @@
+{
+  "precondition": "ok",
+  "incompatible_pairs": [],
+  "maximal_compatibles": [
+    [
+      1,
+      2,
+      3,
+      4
+    ]
+  ],
+  "prime_compatibles": [
+    [
+      1,
+      2,
+      3,
+      4
+    ]
+  ],
+  "min_cover_size": 1,
+  "min_closed_covers": [
+    [
+      [
+        1,
+        2,
+        3,
+        4
+      ]
+    ]
+  ],
+  "reduced": {
+    "cover": [
+      [
+        1,
+        2,
+        3,
+        4
+      ]
+    ],
+    "rows": {
+      "1": {
+        "0": "[1],0",
+        "1": "[1],1"
+      }
+    },
+    "reset": [
+      1,
+      "0"
+    ]
+  },
+  "derivation": [
+    "Normal: each unstable entry targets a stable one. Stable outputs: column 0 has 1,3 with z=0; column 1 has 2,4 with z=1. No pair is stable in a common column with different z, so no pair is output-incompatible.",
+    "No incompatibility can be implied, so {1,2,3,4} is compatible. Its class set is empty (N(C,0)={1,3} and N(C,1)={2,4} are both inside C), so it dominates every proper subset: it is the only prime.",
+    "Cover {1,2,3,4} is closed. Reduced: column 0 is stable with z=0 (from 1 and 3), column 1 is stable with z=1 (from 2 and 4): a one-state machine where z follows x. The four-state original only counted parity, which is unobservable."
+  ],
+  "source": "synthetic"
+}
