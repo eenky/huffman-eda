@@ -27,8 +27,11 @@ flowchart LR
 1. **Executable semantics first.** `settle()` and `explore()` define what a flow table
    *means* under single-input-change fundamental mode. Every validation rule is a query
    over that semantics, never a separate ad-hoc algorithm.
-2. **Frozen spec, protected golden data.** `docs/SEMANTICS.md` and `tests/golden/` are
-   owner-controlled. Agents implement against them and cannot edit them.
+2. **Frozen spec, append-only golden data.** `docs/spec_lock.json` freezes every completed
+   `docs/SEMANTICS.md` section and the golden harnesses; those hashes move only under an
+   `owner-approved` label applied by the owner. New sections and new golden cases are
+   ordinary PRs, and every PR is approved through a second, independent agent identity
+   (`REVIEWER.md`).
 3. **Machine-readable diagnostics.** Every check returns structured `Diagnostic`
    records (`hfe validate --json`). That JSON is the feedback channel for agents.
 4. **Property-based testing.** Random flow tables (Hypothesis) exercise every pass
