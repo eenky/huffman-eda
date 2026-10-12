@@ -24,6 +24,7 @@ from huffman_eda.equiv import implements
 from huffman_eda.explore import explore
 from huffman_eda.graph_export import to_dot, to_json
 from huffman_eda.io import ParseError, dump_table, load_markdown, load_table
+from huffman_eda.minimize import LimitExceeded, MinimizationError, minimize
 from huffman_eda.model import FlowTable
 from huffman_eda.render import render_rich, render_text
 from huffman_eda.validate import validate
@@ -205,6 +206,34 @@ def equiv_command(
     if counterexample.outcome is not None:
         typer.echo(f"  outcome: {counterexample.outcome}")
     raise typer.Exit(DIAGNOSTICS)
+
+
+@app.command("minimize")
+def minimize_command(
+    spec_file: FileArgument,
+    output: OutputOption,
+) -> None:
+    """Write the fewest-state implementation of SPEC (SEMANTICS §9), or refuse to."""
+    table = _load(spec_file)
+    try:
+        reduced = minimize(table)
+    except MinimizationError as error:
+        # §9.1: the table is outside the section, so there is nothing to minimize.
+        typer.echo(f"{spec_file}: {' '.join(error.rules)}", err=True)
+        raise typer.Exit(DIAGNOSTICS) from error
+    except LimitExceeded as error:
+        typer.echo(f"{spec_file}: {error}", err=True)
+        raise typer.Exit(DIAGNOSTICS) from error
+
+    result = implements(table, reduced)
+    if not result.ok:
+        # §9.7 guarantees this holds, so a counterexample means a bug, not a bad table.
+        typer.echo(f"{spec_file}: the reduced table does not implement it; not written", err=True)
+        raise typer.Exit(DIAGNOSTICS)
+
+    output.write_text(dump_table(reduced), encoding="utf-8")
+    typer.echo(f"{spec_file} -> {output}: {len(table.states())} states -> {len(reduced.states())}")
+    raise typer.Exit(OK)
 
 
 def _trace_text(trace: tuple[str, ...]) -> str:
