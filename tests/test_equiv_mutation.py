@@ -15,9 +15,11 @@ For mutants of a complete, normal table `T`:
 (d) every other redirect — counted and printed, never gated, because such a mutant can be
     genuinely equivalent (the equivalent-mutant problem).
 
-The tables are complete but **not** `normal`: a shortcut needs the entry's settling path to
-be longer than one hop, and `normal` means "no FT004", which excludes exactly those chains.
-With `normal=True` class (b) is unreachable and the operator generates none of it.
+The random tables are complete and **normal**. A shortcut (class (b)) needs the entry's
+settling path to be longer than one hop, and `normal` means "no FT004" (SEMANTICS §5), which
+excludes exactly those chains — so no class (b) mutant can be drawn from them. Class (b) is
+covered by the two chain fixtures below instead, which are deliberately non-normal; they ride
+in every batch, so the class-presence assertions cannot go vacuous.
 """
 
 from __future__ import annotations
@@ -55,8 +57,9 @@ SLOW = settings(
 RUNNER = CliRunner()
 N_INPUTS, N_OUTPUTS, MAX_STATES = 2, 2, 5
 BATCH = 60
-# normal=False is deliberate: see the module docstring.
-TABLES = flow_tables(N_INPUTS, N_OUTPUTS, MAX_STATES, normal=False, complete=True)
+# Class (a) and (c) are gated on normal tables, which is the domain SEMANTICS §5 keeps clean
+# of FT004 warnings; class (b) needs a chain and so comes from the fixtures instead.
+TABLES = flow_tables(N_INPUTS, N_OUTPUTS, MAX_STATES, normal=True, complete=True)
 
 KILLED, ACCEPTED, UNGATED = "killed", "accepted", "ungated"
 
@@ -175,11 +178,10 @@ def _with_cell(table: FlowTable, state: int, column: str, cell: Cell) -> FlowTab
 @given(tables=st.lists(TABLES, min_size=BATCH - 2, max_size=BATCH - 2))
 def test_every_gated_verdict_matches(tables: list[FlowTable]) -> None:
     """Every class (a)/(b)/(c) verdict must match; class (d) is only counted."""
-    # The two chain fixtures are added to every batch. A settling chain is rare in a random
-    # table (measured: ~3.8% of them, so ~10% of 60-table batches have no redirect class at
-    # all), and asserting class presence on the drawn tables alone would flake. They also
-    # make the class-presence assertions below meaningful: a classifier that stopped
-    # producing class (b) or (c) mutants would be caught here as well as in the fixtures.
+    # Classes (a) and (c) come from the drawn tables; class (b) cannot, so the two chain
+    # fixtures ride in every batch and the presence assertions below stay non-vacuous. (A
+    # settling chain is rare: ~3.8% of random tables, and ~10% of 60-table batches contain no
+    # redirect class at all — they are tables whose reachable entries all self-loop.)
     batch = [*tables, build(VIA), build(VIA_DISAGREEING)]
     seen: Counter[str] = Counter()
     ungated: Counter[str] = Counter()
