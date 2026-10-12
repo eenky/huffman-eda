@@ -1,0 +1,9 @@
+{
+  "precondition": [
+    "FT004"
+  ],
+  "derivation": [
+    "(1,0) goes to 2, but (2,0) is unstable, so the transition does not settle in one step. That is FT004, and \u00a710.1 rejects the table for the same reason \u00a79.1 does: there is no settling behaviour for an assignment to preserve."
+  ],
+  "source": "synthetic"
+}

@@ -1,0 +1,118 @@
+{
+  "precondition": "ok",
+  "encoding": {
+    "1": "00",
+    "2": "01",
+    "3": "10",
+    "4": "11"
+  },
+  "diagnostics": [
+    {
+      "rule": "SA002",
+      "state": 4,
+      "column": "00",
+      "path": [
+        3,
+        1,
+        0
+      ]
+    },
+    {
+      "rule": "SA002",
+      "state": 4,
+      "column": "00",
+      "path": [
+        3,
+        2,
+        0
+      ]
+    },
+    {
+      "rule": "SA002",
+      "state": 1,
+      "column": "01",
+      "path": [
+        0,
+        1,
+        3
+      ]
+    },
+    {
+      "rule": "SA002",
+      "state": 1,
+      "column": "01",
+      "path": [
+        0,
+        2,
+        3
+      ]
+    },
+    {
+      "rule": "SA002",
+      "state": 2,
+      "column": "11",
+      "path": [
+        1,
+        0,
+        2
+      ]
+    },
+    {
+      "rule": "SA002",
+      "state": 2,
+      "column": "11",
+      "path": [
+        1,
+        3,
+        2
+      ]
+    }
+  ],
+  "min_state_variables": 3,
+  "min_covers": [
+    [
+      [
+        [
+          1,
+          2
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ]
+      ]
+    ]
+  ],
+  "codes": {
+    "1": "000",
+    "2": "110",
+    "3": "101",
+    "4": "011"
+  },
+  "derivation": [
+    "Synthetic, found by searching random normal tables for one whose race-free minimum exceeds ceil(log2 |S|).",
+    "Brute force over every injective assignment: 0 race-free assignments with 2 variables, 48 with 3. So the minimum is 3 for 4 states, and the `encoding` field records the critical races that kill the natural 2-variable choice.",
+    "Tracey's minimum cover agrees: (12;34) and (13;24) and (14;23)"
+  ],
+  "source": "synthetic"
+}
