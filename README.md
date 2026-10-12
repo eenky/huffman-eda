@@ -38,12 +38,15 @@ flowchart LR
 
 | Path | Purpose |
 |---|---|
-| `AGENTS.md` | Operating rules for coding agents (read first) |
+| `AGENTS.md` | Operating rules and roles for the author agent (read first) |
+| `REVIEWER.md` | Instructions for the independent reviewer agent |
+| `reference/` | Independent reference implementation (reviewer-owned) |
 | `docs/SEMANTICS.md` | Normative definitions: file format, settle, explore, rules |
 | `docs/ARCHITECTURE.md` | Package layout and IR levels |
 | `docs/ROADMAP.md` | Milestones, task index, dependencies |
 | `tasks/` | One file per task, one task per PR |
-| `tests/golden/` | Owner-authored reference tables with expected results |
+| `tests/golden/` | Append-only reference tables with expected results |
+| `docs/spec_lock.json` | Hashes freezing completed SEMANTICS sections and harnesses |
 
 ## Development
 

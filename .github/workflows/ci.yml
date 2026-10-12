@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 jobs:
   test:
@@ -18,33 +17,5 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy
+      - run: python scripts/spec_policy.py verify
       - run: pytest -q -rs
-
-  protected-paths:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Block edits to spec/golden/agent-rules unless labeled spec-approved
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
-        run: |
-          changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
-          pattern='^(tests/golden/|tests/golden_pairs/|tests/test_golden\.py$|docs/SEMANTICS\.md$|AGENTS\.md$|\.github/)'
-          hits=$(printf '%s\n' "$changed" | grep -E "$pattern" || true)
-          if [ -z "$hits" ]; then
-            echo "No protected paths touched."
-            exit 0
-          fi
-          if printf '%s' "$LABELS" | grep -q '"spec-approved"'; then
-            echo "Protected paths touched with spec-approved label:"
-            printf '%s\n' "$hits"
-            exit 0
-          fi
-          echo "::error::This PR modifies protected paths. Agents must not edit these; raise a Spec question instead."
-          printf '%s\n' "$hits"
-          exit 1

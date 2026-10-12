@@ -1,6 +1,0 @@
-# Replace @eenky with your personal GitHub username if eenky is an organization.
-/docs/SEMANTICS.md   @eenky
-/tests/golden/       @eenky
-/tests/test_golden.py @eenky
-/AGENTS.md           @eenky
-/.github/            @eenky

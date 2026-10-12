@@ -1,13 +1,13 @@
 # T300: Spec: §8 equivalence and golden pairs
 
 **Depends on:** M2  
-**Owner:** owner
+**Owner:** author agent (spec PR), approved by reviewer agent
 
 ## Goal
 Define precisely when table B **implements** table A under SIC fundamental mode. This is
 the oracle every later pass is checked against.
 
-## Owner checklist
+## Spec PR checklist
 - Write SEMANTICS §8. Proposed starting point, which you should refine against the book:
   explore the product of A and B from their resets. For every reachable pair and every
   input change where A settles STABLE, B must settle STABLE, and B's final outputs must

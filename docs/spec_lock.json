@@ -1,0 +1,16 @@
+{
+  "files": {
+    "tests/golden_pairs/test_golden_pairs.py": "754d1697e4915f64eac3ae14970186b05fe1be0e03f8e85102568d1655160b30",
+    "tests/test_golden.py": "f9abb6a0e7c56a65deebee6d18b05c3e9f7fa7903347f66c695c1833e1195ec6"
+  },
+  "sections": {
+    "1": "12d868627d818dd73f6b68b57ed7fe1ff32fd776810e5f644bfe0a6e2ccd7cd0",
+    "2": "f0a99759c7da5d67f9fe0a7fa2bf0828a191c52eb3ef2fd741d920232753a7e3",
+    "3": "cd47eca3adfcff9fc4a9c02144f3696ce80f5532acfa0337cac7e31432a1f1e1",
+    "4": "550ea09e1d22d1295eb22a68a7eaf00c75aa8084c57bc6f0244cb9f6e4b30ff9",
+    "5": "22f36ace8c2627d6481cc4600ef37efce608bdc0c6ed1353e9eb4f9b8804dca0",
+    "6": "a4006af878271d53e31d74239da531c90366dd4baae4976010654b3647e86d9f",
+    "7": "17edf253b9a39fd727361867987256ed3790cbb33f89443f69b9038fe5f4f158",
+    "8": "26ea7497f8610d78589c549db3f3dcb66ef69dcace2af69e2d76fa4d13cde16b"
+  }
+}

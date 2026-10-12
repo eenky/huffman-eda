@@ -1,9 +1,9 @@
 # T500: Spec: §10 state assignment and golden
 
 **Depends on:** M4  
-**Owner:** owner
+**Owner:** author agent (spec PR), approved by reviewer agent
 
-## Owner checklist (read the book's state-assignment chapter first)
+## Spec PR checklist (read the book's state-assignment chapter first)
 - Define the encoded table: state variables, codes, and the excitation entry for each
   (code, column).
 - Define races, and critical races: for an unstable transition from code a to code b,

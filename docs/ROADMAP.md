@@ -1,11 +1,12 @@
 # Roadmap
 
-Each milestone opens with a **spec task** (`Tx00`), owned by the repository owner. An
-agent may draft it, but it merges only with the `spec-approved` label because it edits
-`docs/SEMANTICS.md` and `tests/golden/`. Implementation tasks follow and are agent-owned.
+Each milestone opens with a **spec task** (`Tx00`). The author agent drafts it as a spec PR,
+working from the book pages the owner provides. The reviewer agent approves it only after
+its independent reference reproduces every new golden case (see AGENTS.md and REVIEWER.md).
+Implementation tasks follow.
 
-Before each spec task, read the matching chapter of the book. Write that milestone's golden
-cases from the book's worked examples.
+Before each spec task, provide the agent with the matching chapter's pages (PDF or images,
+kept outside this public repo).
 
 | Milestone | Goal | Exit criterion |
 |---|---|---|
@@ -34,28 +35,28 @@ cases from the book's worked examples.
 | T202 | Behavior graph export (DOT, JSON) | T104 | agent |
 | T203 | CLI `hfe` | T106, T201, T202 | agent |
 | T204 | Markdown table import | T102 | agent |
-| T300 | Spec: §8 equivalence + golden pairs | M2 | owner |
+| T300 | Spec: §8 equivalence + golden pairs | M2 | author (spec PR) + reviewer |
 | T301 | Hypothesis strategies for flow tables | T300 | agent |
 | T302 | Implementation relation checker | T301 | agent |
 | T303 | Mutation tests for the oracle + `hfe equiv` | T302 | agent |
-| T400 | Spec: §9 minimization + golden | M3 | owner |
+| T400 | Spec: §9 minimization + golden | M3 | author (spec PR) + reviewer |
 | T401 | Compatibility (implication) table | T400 | agent |
 | T402 | Maximal and prime compatibles | T401 | agent |
 | T403 | Minimum closed cover | T402 | agent |
 | T404 | Reduced table construction + `hfe minimize` | T403 | agent |
-| T500 | Spec: §10 state assignment + golden | M4 | owner |
+| T500 | Spec: §10 state assignment + golden | M4 | author (spec PR) + reviewer |
 | T501 | Encoded table IR and critical race detection | T500 | agent |
 | T502 | Race-free assignment (Tracey/USTT) | T501 | agent |
 | T503 | Excitation and output functions + `hfe assign` | T502 | agent |
-| T600 | Spec: §11 netlists and ternary simulation + golden | M5 | owner |
+| T600 | Spec: §11 netlists and ternary simulation + golden | M5 | author (spec PR) + reviewer |
 | T601 | Gate netlist IR and loader | T600 | agent |
 | T602 | Ternary simulation (Algorithms A and B) | T601 | agent |
 | T603 | Netlist-vs-flow-table checker + `hfe tsim` | T602 | agent |
-| T700 | Spec: §12 hazard-free covers + golden | M6 | owner |
+| T700 | Spec: §12 hazard-free covers + golden | M6 | author (spec PR) + reviewer |
 | T701 | Prime implicant generation | T700 | agent |
 | T702 | SIC hazard-free cover selection | T701 | agent |
 | T703 | Netlist emission and end-to-end flow + `hfe synth` | T702 | agent |
-| T800 | Spec: §13 HDL and SVA + golden | M7 | owner |
+| T800 | Spec: §13 HDL and SVA + golden | M7 | author (spec PR) + reviewer |
 | T801 | SystemVerilog reference model + SVA | T800 | agent |
 | T802 | Structural Verilog export | T800 | agent |
 | T803 | Cosimulation testbench generator and CI job | T801, T802 | agent |

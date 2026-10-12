@@ -1,19 +1,20 @@
+## Kind
+<!-- exactly one: spec PR (spec paths only) | implementation PR (no spec paths) | reference PR (reviewer) -->
+
 ## Task
-<!-- e.g. T103: settle() -->
-Task file: `tasks/…`
+Task file: `tasks/…`  <!-- or: Spec question #… -->
 
 ## What changed
-<!-- 2–5 sentences. Cite the SEMANTICS sections implemented. -->
+<!-- 2–5 sentences. Cite the SEMANTICS sections implemented or added. -->
 
 ## Checklist
-- [ ] Only paths listed under **May touch** were modified
-- [ ] No protected paths touched (tests/golden, test_golden.py, SEMANTICS.md, AGENTS.md, .github)
-- [ ] `ruff check .` and `ruff format --check .` pass
-- [ ] `mypy` (strict) passes
-- [ ] `pytest -q -rs` passes; no new skip/xfail/type: ignore
-- [ ] Every task Acceptance item is met (list each below)
+- [ ] Only paths allowed for this PR kind and task were modified
+- [ ] `ruff check .`, `ruff format --check .`, `mypy`, `scripts/spec_policy.py verify`, `pytest -q -rs` pass
+- [ ] No skip/xfail/importorskip/type: ignore/noqa/no-cover added
+- [ ] Every Acceptance item is met (evidence below)
 - [ ] New tests fail without this change (explain how verified)
-- [ ] No new runtime dependencies (or listed in task)
+- [ ] Every claim (unobservable, excluded, bounded, equivalent) cites the test or command showing it
+- [ ] Spec PR only: new sections locked (`spec_policy.py lock`); every new golden case has `derivation` and `source`
 
 ## Acceptance evidence
 <!-- One line per acceptance item, with the command and result -->
@@ -24,4 +25,4 @@ Task file: `tasks/…`
 ```
 
 ## Spec conflicts or open questions
-<!-- "None", or describe and link the Spec question issue -->
+<!-- "None", or link the Spec question issue -->
