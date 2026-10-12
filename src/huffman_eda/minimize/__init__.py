@@ -56,6 +56,18 @@ _PENDING: dict[str, str] = {
 _TASK: dict[str, str] = {"compatibles": "T402", "cover": "T403", "reduce": "T404"}
 
 
+def _bind(module_name: str) -> None:
+    """Bind every §9.8 name that module owns into this package.
+
+    Importing a submodule sets it as an attribute of its package, so a module whose name
+    matches one of its functions (``reduce``) would otherwise shadow that function.
+    """
+    module = import_module(f".{module_name}", __name__)
+    for name, owner in _PENDING.items():
+        if owner == module_name:
+            globals()[name] = getattr(module, name)
+
+
 def __getattr__(name: str) -> Any:
     """Resolve a §9.8 name that a later task owns, on first use (PEP 562).
 
@@ -66,14 +78,12 @@ def __getattr__(name: str) -> Any:
     if module_name is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     try:
-        module = import_module(f".{module_name}", __name__)
+        _bind(module_name)
     except ModuleNotFoundError as exc:
         raise ModuleNotFoundError(
             f"{__name__}.{module_name} is not landed yet; {name} arrives with {_TASK[module_name]}"
         ) from exc
-    value = getattr(module, name)
-    globals()[name] = value  # cache it, so later lookups skip this path
-    return value
+    return globals()[name]
 
 
 def __dir__() -> list[str]:
