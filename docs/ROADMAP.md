@@ -12,7 +12,7 @@ cases from the book's worked examples.
 | M0 Bootstrap | Scaffold, CI, rules, M1 spec | Done in the initial commit |
 | M1 Semantics | IR, parser, settle, explore, rules FT000 to FT009 | `pytest tests/test_golden.py -rs` passes with 0 skipped |
 | M2 Tooling | Gray grid, graph export, CLI, Markdown import | `hfe validate` exit codes match SEMANTICS §6 on all golden cases |
-| M3 Oracle | Random tables, behavioral equivalence, counterexamples | `equiv(T, T)` holds for 1000 random tables; seeded mutants are caught |
+| M3 Oracle | Random tables, behavioral equivalence, counterexamples | `implements(T, T)` holds for 1000 random tables. Every class-(a)/(c) mutant is killed, and every class-(b) mutant is accepted (§8.7) |
 | M4 Minimization | Compatibles, prime compatibles, minimum closed cover | Every reduced table implements its original (property test) |
 | M5 State assignment | Race analysis, race-free assignment, excitation table | No critical races; decoded behavior implements the original |
 | M6 Ternary simulation | Netlist IR, Eichelberger A/B, netlist-vs-table check | Detects every seeded hazard and race in the M6 golden cases |

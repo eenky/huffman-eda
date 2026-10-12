@@ -15,10 +15,12 @@ tests/golden/**, tests/test_golden.py, docs/SEMANTICS.md, AGENTS.md, .github/**,
 ## Spec
 - Mutation operators on a complete normal table: flip one specified output bit on a
   reachable stable entry; redirect one reachable unstable entry to a different stable
-  state in the same column. For each mutant, `implements(original, mutant)` must be
-  false, unless the mutation is provably unobservable (the test explains how it decides).
+  state in the same column. Each mutant's expected verdict is fixed by its class, before
+  the oracle is asked (SEMANTICS §8.7): flips and distinguishing redirects must be killed,
+  shortcut redirects must be accepted, and every other redirect is counted but not gated.
 - `hfe equiv A B` prints the counterexample trace and exits 1 when the relation fails.
 
 ## Acceptance
-- At least 95% mutation kill rate over 300 random tables; every surviving mutant is
-  justified as unobservable by an assertion in the test.
+- Over 300 random tables, every gated mutant verdict matches §8.7. Class-(d) kill and
+  survive counts are printed in the test output. Classification uses only the table and
+  `settle`, never `equiv.py`.
