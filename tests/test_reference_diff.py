@@ -21,6 +21,18 @@ import pytest
 from huffman_eda.equiv import implements
 from huffman_eda.explore import explore
 from huffman_eda.io import load_table
+from huffman_eda.minimize import (
+    MinimizationError,
+    check_precondition,
+    incompatible_pairs,
+    is_closed_cover,
+    maximal_compatibles,
+    min_closed_cover,
+    minimize,
+    prime_compatibles,
+    reduce,
+)
+from huffman_eda.model import Cell, Choice, FlowTable
 from huffman_eda.validate import validate
 from reference import huffman_ref as ref
 from reference import minimize_ref as mref
@@ -204,3 +216,118 @@ def test_reference_minimization_is_sound() -> None:
         for cover in [*mref.min_closed_covers(t), singletons]:
             ok, cex = ref.implements(t, mref.reduce(t, cover))
             assert ok, (t.rows, t.reset, cover, cex)
+
+
+# ------------------------------------------------- §9 production vs the reference
+
+
+def _to_production(t: ref.RefTable) -> FlowTable:
+    """The same table as production sees it: built from the reference's structure."""
+    return FlowTable(
+        name="r",
+        inputs=tuple(t.inputs),
+        outputs=tuple(t.outputs),
+        reset=tuple(t.reset),
+        rows={
+            s: {
+                c: Cell(tuple(Choice(nxt, outs) for nxt, outs in t.cell(s, c)))
+                for c in t.columns()
+                if t.cell(s, c)
+            }
+            for s in mref.states(t)
+        },
+    )
+
+
+def _production_shape(t: FlowTable) -> tuple[object, dict[int, dict[str, object]]]:
+    """A table's behaviour as data, so production and the reference compare directly."""
+    cells = {
+        s: {
+            c: tuple((choice.next, choice.outputs) for choice in t.cell(s, c).choices)
+            for c in t.columns()
+            if t.cell(s, c).choices
+        }
+        for s in t.states()
+    }
+    return tuple(t.reset), cells
+
+
+def _reference_shape(t: ref.RefTable) -> tuple[object, dict[int, dict[str, object]]]:
+    """The reference's table in the same shape."""
+    cells = {
+        s: {c: tuple(t.cell(s, c)) for c in t.columns() if t.cell(s, c)} for s in mref.states(t)
+    }
+    return tuple(t.reset), cells
+
+
+def _mutate_one_cell(rng: random.Random, t: ref.RefTable) -> None:
+    """A single-change mutant: one cell's target, outputs, or presence, and nothing else."""
+    places = [(s, c) for s in mref.states(t) for c in t.columns() if t.cell(s, c)]
+    if not places:
+        return
+    s, c = rng.choice(places)
+    nxt, outs = t.cell(s, c)[0]
+    which = rng.random()
+    if which < 0.4:
+        t.rows[s][c] = [(rng.randint(1, max(mref.states(t))), outs)]
+    elif which < 0.8 and outs:
+        j = rng.randrange(len(outs))
+        t.rows[s][c] = [(nxt, outs[:j] + rng.choice("01-") + outs[j + 1 :])]
+    else:
+        del t.rows[s][c]
+
+
+@pytest.mark.parametrize("mutant", [False, True], ids=["random", "single-change-mutant"])
+def test_production_agrees_with_reference_on_minimization(mutant: bool) -> None:
+    """§9: production and the reference agree on every eligible table, verdict included.
+
+    Seeded, no Hypothesis, same generator as the reference's own soundness check. The
+    comparison covers the eligibility verdict, the incompatibility set, maximal and prime
+    compatibles, the minimum cover, `reduce` on every cover either side calls minimal, and
+    the reduced tables cell by cell.
+    """
+    rng = random.Random(SEED + (23 if mutant else 22))
+    checked = 0
+    for _ in range(600):
+        if checked >= 60:
+            break
+        t = _random_normal(rng)
+        if mutant:
+            _mutate_one_cell(rng, t)
+        table = _to_production(t)
+
+        rules = mref.violated_precondition(t)
+        try:
+            check_precondition(table)
+        except MinimizationError as error:
+            assert list(error.rules) == rules, (t.rows, t.reset)
+            continue
+        else:
+            assert rules == [], (t.rows, t.reset)
+        checked += 1
+
+        context = (t.rows, t.reset)
+        assert incompatible_pairs(table) == mref.incompatible_pairs(t), context
+        assert list(maximal_compatibles(table)) == mref.maximal_compatibles(t), context
+        assert list(prime_compatibles(table)) == mref.prime_compatibles(t), context
+
+        covers = mref.min_closed_covers(t)
+        cover = min_closed_cover(table)
+        assert len(cover) == len(covers[0]), context
+        assert list(cover) in covers, context
+        assert is_closed_cover(table, cover), context
+
+        singletons = [frozenset([s]) for s in mref.states(t)]
+        for each in [*covers, cover, singletons]:
+            assert is_closed_cover(table, each) == mref.is_closed_cover(t, each), context
+            assert _production_shape(reduce(table, each)) == _reference_shape(
+                mref.reduce(t, each)
+            ), (context, each)
+
+        for member in covers[0]:
+            smaller = [c for c in covers[0] if c != member]
+            assert is_closed_cover(table, smaller) == mref.is_closed_cover(t, smaller), context
+
+        assert _production_shape(minimize(table)) == _reference_shape(mref.reduce(t, cover)), (
+            context
+        )
