@@ -13,9 +13,14 @@ src/huffman_eda/equiv.py, tests/test_equiv.py
 tests/golden/**, tests/test_golden.py, docs/SEMANTICS.md, AGENTS.md, .github/**, tests/golden_pairs/**
 
 ## Spec
-- `implements(a, b) -> EquivResult(ok: bool, counterexample: tuple[InputStep, ...] | None)`.
-  The counterexample is the shortest input sequence from reset, found by BFS.
+- `implements(a, b) -> EquivResult`, where `EquivResult(ok: bool, counterexample:
+  Counterexample | None)` and `Counterexample(trace, kind, output, outcome)` are the §8.5
+  shapes (`Counterexample.to_dict()` is exactly what `expected.json` holds). This
+  supersedes the earlier `tuple[InputStep, ...]` sketch in this file: §8.4 fixes the
+  counterexample as the first failure in a fixed breadth-first order, so it is the
+  shortest trace and is unique; §8.5 drops the separate `InputStep` type.
 - `equivalent(a, b)` holds iff `implements(a, b)` and `implements(b, a)`.
+- §8.1's precondition (identical inputs and outputs) raises `ValueError`.
 
 ## Acceptance
 - All golden pairs match their expected result and counterexample.
