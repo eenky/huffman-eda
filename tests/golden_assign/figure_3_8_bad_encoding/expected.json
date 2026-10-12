@@ -1,0 +1,78 @@
+{
+  "precondition": "ok",
+  "encoding": {
+    "1": "00",
+    "2": "01",
+    "3": "10",
+    "4": "11"
+  },
+  "diagnostics": [
+    {
+      "rule": "SA002",
+      "state": 2,
+      "column": "10",
+      "path": [
+        1,
+        0,
+        2
+      ]
+    },
+    {
+      "rule": "SA002",
+      "state": 2,
+      "column": "10",
+      "path": [
+        1,
+        3,
+        2
+      ]
+    },
+    {
+      "rule": "SA002",
+      "state": 1,
+      "column": "11",
+      "path": [
+        0,
+        1,
+        3
+      ]
+    },
+    {
+      "rule": "SA002",
+      "state": 1,
+      "column": "11",
+      "path": [
+        0,
+        2,
+        3
+      ]
+    },
+    {
+      "rule": "SA002",
+      "state": 2,
+      "column": "11",
+      "path": [
+        1,
+        0,
+        2
+      ]
+    },
+    {
+      "rule": "SA002",
+      "state": 2,
+      "column": "11",
+      "path": [
+        1,
+        3,
+        2
+      ]
+    }
+  ],
+  "derivation": [
+    "Figure 3.8 of the reference work (p.56 printed), with the assignment the same section calls a critical race on p.57: state 1=00, 2=01, 3=10, 4=11.",
+    "The transition (10,2)->3 changes both variables. Through code 11 (state 4) it settles in 4 under 10, through 00 (state 1) in 1: the settled state depends on the race winner, which is exactly the book's example.",
+    "(11,2)->3 and (11,1)->4 are the same shape; the book names only (10,2)->3.",
+    "Every entry here comes from \u00a710.3 applied to the table, not from the book's prose: the book states two of these and the rule finds six."
+  ],
+  "source": "book: p.56, Figure 3.8"
+}

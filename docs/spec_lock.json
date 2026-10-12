@@ -1,11 +1,13 @@
 {
   "files": {
+    "tests/golden_assign/test_golden_assign.py": "3d3867a5fb2aa5badfb076cd252f21afb0837cfc8bd44abe28fc79e04623b1bf",
     "tests/golden_minimize/test_golden_minimize.py": "4138bf42b28a8c80a67066189a8a3a757f6bb5ac7e46cb720c3d782a486c0882",
     "tests/golden_pairs/test_golden_pairs.py": "754d1697e4915f64eac3ae14970186b05fe1be0e03f8e85102568d1655160b30",
     "tests/test_golden.py": "f9abb6a0e7c56a65deebee6d18b05c3e9f7fa7903347f66c695c1833e1195ec6"
   },
   "sections": {
     "1": "12d868627d818dd73f6b68b57ed7fe1ff32fd776810e5f644bfe0a6e2ccd7cd0",
+    "10": "6af0a22617cde3ef54c6401831e2adbe62280dce1e3f6ee67093d56ae4b4867e",
     "2": "f0a99759c7da5d67f9fe0a7fa2bf0828a191c52eb3ef2fd741d920232753a7e3",
     "3": "cd47eca3adfcff9fc4a9c02144f3696ce80f5532acfa0337cac7e31432a1f1e1",
     "4": "550ea09e1d22d1295eb22a68a7eaf00c75aa8084c57bc6f0244cb9f6e4b30ff9",

@@ -1,0 +1,75 @@
+{
+  "precondition": "ok",
+  "encoding": {
+    "1": "001",
+    "2": "010",
+    "3": "100"
+  },
+  "diagnostics": [
+    {
+      "rule": "SA003",
+      "state": 3,
+      "column": "0",
+      "path": [
+        4,
+        0,
+        2
+      ]
+    },
+    {
+      "rule": "SA003",
+      "state": 3,
+      "column": "0",
+      "path": [
+        4,
+        6,
+        2
+      ]
+    },
+    {
+      "rule": "SA003",
+      "state": 1,
+      "column": "1",
+      "path": [
+        1,
+        0,
+        4
+      ]
+    },
+    {
+      "rule": "SA003",
+      "state": 1,
+      "column": "1",
+      "path": [
+        1,
+        5,
+        4
+      ]
+    },
+    {
+      "rule": "SA003",
+      "state": 2,
+      "column": "1",
+      "path": [
+        2,
+        0,
+        4
+      ]
+    },
+    {
+      "rule": "SA003",
+      "state": 2,
+      "column": "1",
+      "path": [
+        2,
+        6,
+        4
+      ]
+    }
+  ],
+  "derivation": [
+    "One-hot codes for 3 states. Two variables change in every transition, and both codes reachable by flipping one of them are codes of no state.",
+    "Under \u00a710.3 that is SA003 (warning), not SA002: no row exists for those codes, so \u00a712 completes the don't-cares. This is the decision that keeps one-hot legal and guarantees that a race-free assignment always exists."
+  ],
+  "source": "synthetic"
+}

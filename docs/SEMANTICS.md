@@ -378,11 +378,218 @@ of the following:
 
 Every case also carries `derivation` and `source`.
 
+## 10. State assignment
+
+`assign(T)` gives every state of `T` a code — a vector of values on the feedback wires of the
+Huffman model — such that no transition can settle in the wrong state. This is the classical
+theory of race-free state assignment: Tracey's Unicode Single Transition Time (USTT) encoding
+by ordered dichotomies. A circuit built from such an encoding is only correct if the state
+signals are what changes, so this section reasons about codes, not about gates; hazards inside
+the combinational block are §12's subject.
+
+### 10.1 Precondition
+
+`assign` and everything in this section apply only to a table `T` with:
+- `explore(T).reset_ok` (no FT000),
+- no FT001 (every cell has at most one choice),
+- no FT003 and no FT004.
+
+This is exactly §9.1: `T` is **normal**. Otherwise each function in this section raises
+`AssignmentError`, whose `rules` attribute is the sorted tuple of the violated rule IDs.
+
+Normality is needed here for the same reason as in §9: an unstable entry must reach a stable
+one in a single step, so that "the state a transition settles in" is a well-defined state of
+`T`. A table that is not normal has no meaningful settling behaviour to preserve, and the
+golden case `non_normal_rejected` fails §10.1 for the same reason it fails §9.1.
+
+### 10.2 Encoded tables
+
+An **assignment** is a map `codes: S → {0,1}^k` for some `k ≥ 1`, injecting `S` into codes.
+`k` is the number of **state variables** (state signals) `y_1 … y_k`. A code is **defined**
+when some state has it and **undefined** otherwise. Two states with the same code, or a state
+without a code, is SA004.
+
+`encode(T, codes) -> EncodedTable` keeps `inputs` and `outputs` and has one entry per (defined
+code, column). Writing `y` for the code of state `s`:
+- `(s,c)` unspecified: no entry;
+- `(s,c)` stable: a **stable** entry at `y` in `c`, with the outputs of `(s,c)`;
+- otherwise: an entry **unstable** at `y` in `c`, next code `next(s,c)`, every output bit `-`.
+
+Transient outputs are `-` by the same decision as §9.6, and for the same reason. Undefined
+codes have no entry at all: their next state is not implied by the table, so §12 is free to
+complete it however the cover it chooses allows.
+
+### 10.3 Races and critical races
+
+The delay model is the one §3.3.3 of the reference work uses for this step: delays on the state
+signals are **unbounded** (arbitrary finite), the combinational block is **delay-free**. Then:
+
+- a **race** is a simultaneous change of two or more state signals caused by a single
+  transition;
+- a race is **critical** if the state the circuit settles in depends on which signal changes
+  first, i.e. on the winner of the race.
+
+Operationally, for an unstable entry at code `y` in column `c` with next code `z`:
+let `D = { i : y_i ≠ z_i }` be the variables that change. For every non-empty proper subset
+`J ⊊ D`, let `y'` be the code obtained by flipping exactly the variables in `J` — this is the
+code the circuit passes through when those signals change first:
+- if `y'` is defined and the next-state function under `c` from `y'` reaches `z`, this order of
+  events is safe;
+- if `y'` is defined and settling from it ends anywhere else, the entry has a **critical race**
+  (SA002), reported with `column`, `from` (`y`), `to` (`z`) and `via` (`y'`);
+- if `y'` is undefined, the transient passes through a code the table says nothing about
+  (SA003, a warning: `column`, `from`, `to`, `via`). §12 completes those don't-cares. §10 does
+  not treat it as a race, because no row exists to be right or wrong about.
+
+**Decision: an undefined transient is reported, not rejected.** Condemning it would rule out
+every encoding whose codes do not fill `{0,1}^k`, one-hot included — and one-hot is a legitimate
+style (a transition between one-hot codes passes only through undefined codes, so it is
+race-free here with no signal held constant). The warning keeps that visible to §12 instead of
+hiding it, and it is what makes a race-free assignment exist for every table (§10.4).
+
+`critical_races(encoded) -> list[Diagnostic]` returns SA002 and SA003 diagnostics sorted by
+(column, state, path). Each carries `state` (the source state of the transition) and `column`,
+and its `path` holds **code values**, not states: the unstable code, the intermediate code the
+order of events passes through, and the transition's target code. SA002 is severity `error`,
+SA003 `warning`; §6 exit codes apply unchanged.
+
+### 10.4 Race-free assignment
+
+An **ordered dichotomy** `(L; R)` is a two-block partition of the states: one state signal is 0
+on the states of `L` and 1 on those of `R`. A signal of an encoding implies one, and an
+encoding is a set of them.
+
+- `d1` and `d2` are **compatible** iff `L(d1) ∩ R(d2) = ∅` and `R(d1) ∩ L(d2) = ∅` (they can be
+  merged into one signal's dichotomy). Their **union** is the dichotomy of the unions of the
+  blocks, and it is defined only for compatible pairs.
+- `d1` **covers** `d2` iff `d2`'s blocks are subsets of `d1`'s, in either order. Covering views
+  a dichotomy as an unordered pair: `(1;23)` is covered by `(14;235)` and by `(234;1)`, not by
+  `(12;3)`.
+- A **prime dichotomy** is a dichotomy that no other (with at least one block proper) covers in
+  this sense, among those obtained by unions of pairwise-compatible seeds.
+
+The assignment problem: find an injective `codes` with the fewest state variables such that
+`critical_races(encode(T, codes))` contains no SA002.
+
+Every table has a solution — with one variable per state and one-hot codes, every transition's
+intermediates are undefined, so nothing is critical — and the minimum is therefore well defined
+and at least `ceil(log2 |S|)`. It can be strictly larger: see the golden case
+`tracey_beyond_log2`, and Figure 3.8 for a case where it equals `ceil(log2 |S|)`.
+
+Tracey's theorem (Unger's USTT result) characterizes this without enumerating encodings, for
+single-output-change tables: a USTT encoding has no critical race **iff** for every column `c`
+and every pair of transitions `(c, s_1) → s_2` and `(c, s_3) → s_4` under `c` with `s_2 ≠ s_4`,
+some state signal's dichotomy covers `(s_1s_2; s_3s_4)` or `(s_3s_4; s_1s_2)` — that is, some
+signal stays constant through both and tells them apart. §10.3 is the normative rule; the golden
+cases `figure_3_8_tracey` and `tracey_beyond_log2` record that the two agree there, including on
+a table where the brute-force minimum is 3 for 4 states and no 2-variable encoding works.
+
+### 10.5 The procedure, and its certificate
+
+`tracey(T)` builds the seed dichotomies, then a minimum cover by primes. Normatively:
+
+1. seeds are the **uniqueness dichotomies** `(s_i; s_j)` for `i ≠ j`, plus, for every column `c`
+   and every pair of transitions `s_1 → s_2`, `s_3 → s_4` under `c` with `s_2 ≠ s_4` and
+   (`s_1 ≠ s_2` or `s_3 ≠ s_4`), the eight dichotomies `(s_1s_2; s_3)`, `(s_1s_2; s_4)`,
+   `(s_1; s_3s_4)`, `(s_2; s_3s_4)` and their four reverses. Seeds that are not proper two-block
+   partitions are dropped;
+2. the **prime dichotomies** are the unions of the maximal pairwise-compatible sets of seeds;
+3. a **cover** is a set of prime dichotomies covering every seed; the minimum cover's size is the
+   minimum number of state variables.
+
+**Decision: the all-zero state is fixed.** State `1` receives the all-zero code, so seeds with
+state 1 in their right block are dropped, exactly as the reference work does when it sets the
+first state to the all-zero code. This is the standard normalization (any encoding's bit-wise
+complement is equally good) and it makes the result deterministic rather than merely optimal.
+
+Codes are read off the cover: canonically order its members as in §9.5, and let `b_i` be 0 for a
+state in the `i`-th member's left block, 1 for its right block. The code is `Σ b_i · 2^(i-1)`,
+so the first cover member is the least significant variable. With state `1` in every left block,
+state `1` is the all-zero code. Several minimum covers can exist; any is correct, and the one
+`tracey` returns is the first in canonical order — a cover ordered by sorted blocks, compared by
+the sorted state tuples of its members — so that the returned codes are reproducible rather than
+merely optimal. The returned certificate names, for each seed, the cover member that covers it.
+
+Functions that are exponential in the worst case take a keyword `limit` and raise
+`LimitExceeded` when it is exceeded, as in §9.8.
+
+### 10.6 Excitation and output functions, and `decode`
+
+`excitation(encoded)` returns the functions `y_i(x, y)` and `z_j(x, y)` as truth tables over
+inputs and codes, one entry per (defined code, column): `y_i` is the `i`-th bit of the next code
+of that entry, and `z_j` the `j`-th output bit. Entries that the encoded table does not specify,
+undefined codes, and the `-` of a transient output are **don't-cares**, and are reported as
+such rather than as a value. Which don't-care values are safe is §11's and §12's question.
+
+`decode(encoded)` reads the codes back: the state set is the encoded table's states, cell
+`(s,c)` is `[s]` with the entry's outputs when the entry is stable, `next` with outputs `-` when
+it is unstable, and unspecified when the encoded table has no entry. `decode(encode(T, codes))`
+agrees with `T` on every specified, stable entry and every reachable transition, so
+`implements(T, decode(encode(T, codes)))` for any injective `codes` under the §10.1
+precondition: only transient outputs may differ, and §8.2 does not observe them.
+
+### 10.7 Correctness (normative consequences, tested)
+
+1. `critical_races(assign(T))` contains no SA002, for every `T` satisfying §10.1. Tested by
+   T502 over 300 random normal tables.
+2. `implements(T, decode(assign(T)))`. This is M5's milestone gate.
+3. `assign(T)` uses the fewest state variables of any race-free encoding of `T` (§10.4). Tested
+   against a brute force over all injective encodings on the golden cases.
+4. §10.3 and Tracey's dichotomy condition agree: where a race exists, some pair of transitions
+   under one column is not told apart by a constant signal, and conversely. Tested on the golden
+   cases by the differential suite.
+
+### 10.8 API (module `huffman_eda.assign`)
+
+All functions check §10.1 first.
+
+```
+class AssignmentError(ValueError)      # .rules: tuple[str, ...]
+class LimitExceeded(RuntimeError)      # module-local, like §9.8's; the CLI catches both
+check_precondition(table) -> None
+encode(table, codes, *, bits: int | None = None) -> EncodedTable
+defined_codes(encoded) -> frozenset[str]
+critical_races(encoded) -> list[Diagnostic]                # SA002 (error), SA003 (warning)
+dichotomies(table, *, limit: int = 100_000) -> Dichotomies # seeds, primes, compatibilities
+tracey(table, *, limit: int = 100_000) -> Assignment       # codes, variables, certificate
+assign(table, *, limit: int = 100_000) -> EncodedTable     # encode(table, tracey(table).codes)
+excitation(encoded) -> ExcitationTable                     # y_i(x, y), z_j(x, y), don't-cares
+decode(encoded) -> FlowTable
+```
+
+`EncodedTable` carries `name`, `inputs`, `outputs`, `states`, `codes`, `bits`, and the reset as
+`(code, column)`; an entry is `(next_code, outputs, stable)`. `Assignment` carries `codes`,
+`variables` (the cover, in canonical order) and `certificate`. Rule IDs: SA001 is §10.1
+(raised, with the violated FT IDs in `rules`); SA002 critical race; SA003 transient through an
+undefined code; SA004 not an injective assignment.
+
+### 10.9 Golden cases
+
+`tests/golden_assign/<case>/{table.yaml, expected.json}`. The `expected.json` file holds:
+- `"precondition": ["FT004", ...]` for a table that fails §10.1, and nothing else is required;
+- otherwise `"precondition": "ok"` plus any of:
+  - `encoding`: the assignment under test, as `{state: code}`, for the cases that test a
+    specific one (the book's bad assignment, or a race-free witness);
+  - `diagnostics`: the list of `{rule, state, column, path}` that `critical_races` must return
+    for `encoding`, `rule` being `SA002` for a critical race and `SA003` for a transient through
+    an undefined code, with `path` the code values of §10.3 (unstable, intermediate, settled),
+    sorted by (column, state, path);
+  - `min_state_variables`: the minimum number of state variables;
+  - `min_covers`: every minimum cover, each a list of `[left, right]` blocks in canonical order;
+  - `codes`: the codes of the canonical minimum cover (§10.5).
+
+Every case also carries `derivation` (why the expectation is what it is) and `source`
+(`"synthetic"`, or `"book: <page>, <figure id>"` for a case taken from the reference work).
+
+Cases whose expectation is a specific `encoding` are checked by `encode` + `critical_races`
+alone, so they are meaningful without a search procedure. `figure_3_8_bad_encoding` and
+`figure_3_8_tracey` are the reference work's own example; `tracey_beyond_log2` is a synthetic
+table whose minimum exceeds `ceil(log2 |S|)`.
+
 ## 10+. Reserved
 
 | Section | Milestone | Topic |
 |---|---|---|
-| 10 | M5 | Encoded tables, races, critical races |
 | 11 | M6 | Gate netlist IR and ternary simulation |
 | 12 | M7 | Hazard-free covers under SIC |
 | 13 | M8 | HDL export and SVA properties |
