@@ -1,0 +1,6 @@
+output_nonmonotonic: inputs=[x] outputs=[z] reset=(1,0)
+  state |   0   |   1  
+  ---------------------
+      1 | [1],0 | 2,1  
+      2 | 1,0   | 3,0  
+      3 | 1,0   | [3],1
