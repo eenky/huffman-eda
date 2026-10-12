@@ -1,0 +1,7 @@
+name: toggle_renamed
+inputs: [x]
+outputs: [z]
+reset: [7, "0"]
+rows:
+  7: {"0": "[7],0", "1": "9,-"}
+  9: {"0": "7,-", "1": "[9],1"}

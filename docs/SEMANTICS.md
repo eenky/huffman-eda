@@ -2,7 +2,7 @@
 
 This document is the single source of truth for what the tools compute. If code, a task
 file, and this document disagree, this document wins. Changes require a PR labeled
-`spec-approved` from the repository owner. Sections 1 to 7 cover Milestones 1 and 2.
+`spec-approved` from the repository owner. Sections 1 to 8 cover Milestones 1 to 3.
 Sections for later milestones are added by that milestone's spec task.
 
 ## 1. Notation
@@ -139,11 +139,105 @@ Notes:
 - All machine-readable output (JSON, golden comparisons) uses numeric state order and
   lexicographic column order. Gray order is used for human display only.
 
-## 8. Reserved
+## 8. Implementation relation
+
+`implements(spec, impl)` decides whether flow table `impl` correctly implements flow table
+`spec` under SIC fundamental mode. Every later pass is checked with it: `spec` is the
+original table and `impl` is the pass output.
+
+### 8.1 Preconditions
+
+`spec` and `impl` must have identical `inputs` and identical `outputs` (names and order).
+Otherwise `implements` raises `ValueError`. That is a usage error, not a counterexample.
+
+### 8.2 Observables
+
+- The observable behavior is the output vector at each **stable** total state reached
+  after reset and after each input change.
+- Transient outputs are not observables. They enter the relation only through the
+  hazard clause (8.4, check 3).
+- Output compatibility: `impl_out` is compatible with `spec_out` iff for every bit `j`,
+  either `spec_out[j] = '-'` or `impl_out[j] = spec_out[j]`. An `impl` value of `-`
+  where `spec` specifies a value is **incompatible**.
+
+### 8.3 Don't-cares resolve per context
+
+A `-` in `spec` constrains each visit independently. `impl` may produce different values
+for the same `spec` entry on different runs, depending on history. This is a trace check:
+it compares each input sequence's run of `spec` with the run of `impl`. There is no
+requirement for a global state mapping. (Since `spec` is deterministic on every step the
+relation checks, trace containment and simulation coincide here. The only real choice is
+whether don't-cares are resolved per context or globally, and this section chooses per
+context. State minimization needs this: one `spec` state may be covered by several
+reduced states.)
+
+### 8.4 Definition
+
+If `explore(spec).reset_ok` is false, `implements` holds vacuously.
+
+Otherwise, let `(rs, c0)` be the spec's reset and `(ri, ci)` the impl's reset. Then:
+
+**Reset check.** Fails with kind `RESET` and trace `[]` if `ci != c0`, or `impl`'s reset
+is missing or not stable, or the impl reset outputs are incompatible with the spec reset
+outputs.
+
+**Product exploration.** Breadth-first search over pairs `((ss, c), (si, c))` of stable
+total states, starting from the reset pair. The queue is FIFO, and bit index `i` is
+visited in increasing order. For each dequeued pair and each `i`:
+
+- `c' := adj(c, i)`, `RS := settle(spec, ss, c')`, `RI := settle(impl, si, c')`
+- If `RS` is not `STABLE`, the step is unconstrained: no check, no enqueue.
+- Otherwise run these checks in order. The first one that fails ends the search:
+  1. `IMPL_NOT_STABLE`: `RI` is not `STABLE`.
+  2. `OUTPUT_MISMATCH`: the outputs of `(RI.final, c')` are incompatible with those of
+     `(RS.final, c')`.
+  3. `HAZARD`: impl's transition `(si, c) -> c'` violates FT007 (SEMANTICS §5) for some
+     output `j`, while spec's transition `(ss, c) -> c'` does not violate FT007 for that
+     same `j`. That is, impl may not introduce a dynamic output hazard that the spec does
+     not already have.
+- If every check passes, enqueue `((RS.final, c'), (RI.final, c'))` if it has not been
+  seen.
+
+`implements` holds iff no check fails. Because the search is breadth-first in that fixed
+order, the first failure found has a shortest trace, and it is unique.
+
+Consequences (normative, and tested):
+- `implements(T, T)` holds for every table `T`, including tables with FT007 violations.
+- `implements` is not symmetric. `equivalent(a, b)` means `implements(a, b)` and
+  `implements(b, a)`.
+- Renaming states preserves `implements`.
+
+### 8.5 Result
+
+```
+EquivResult(ok: bool, counterexample: Counterexample | None)
+Counterexample(trace: tuple[str, ...],   # columns applied after reset, in order
+               kind: str,                # RESET | IMPL_NOT_STABLE | OUTPUT_MISMATCH | HAZARD
+               output: str | None,       # lowest-index offending output name
+                                         # (OUTPUT_MISMATCH, HAZARD, RESET-by-outputs)
+               outcome: str | None)      # RI.kind name for IMPL_NOT_STABLE, else None
+Counterexample.to_dict() -> {"trace": [...], "kind": ..., "output": ..., "outcome": ...}
+```
+
+### 8.6 Golden pairs
+
+`tests/golden_pairs/<case>/{a.yaml, b.yaml, expected.json}`. `expected.json` holds
+`implements_ab` = `implements(a, b)` and `implements_ba` = `implements(b, a)`, each as
+`{"ok": bool, "counterexample": Counterexample.to_dict() | null}`.
+
+### 8.7 Consequences for M3 tasks
+
+- T302: this section replaces the `InputStep` signature in the task file.
+- T303: the output-flip mutation operator only flips **specified** bits on reachable
+  stable entries, including the reset entry. Every such mutant must be killed: there is no
+  "unobservable" exemption for this operator. Surviving redirect-mutants must be justified
+  by an independent bounded trace enumeration (depth <= 2 x number of states), never by
+  `equiv.py` itself.
+
+## 9+. Reserved
 
 | Section | Milestone | Topic |
 |---|---|---|
-| 8 | M3 | Behavioral equivalence and implementation relation |
 | 9 | M4 | Compatibility, closed covers, reduced tables |
 | 10 | M5 | Encoded tables, races, critical races |
 | 11 | M6 | Gate netlist IR and ternary simulation |

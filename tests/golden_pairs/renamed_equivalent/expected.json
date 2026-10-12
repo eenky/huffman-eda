@@ -1,0 +1,5 @@
+{
+  "implements_ab": {"ok": true, "counterexample": null},
+  "implements_ba": {"ok": true, "counterexample": null},
+  "derivation": ["b is a with states renamed 1->7, 2->9; product pairs are (1,7) and (2,9) only."]
+}
